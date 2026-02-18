@@ -101,28 +101,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
-      node-versions: ${{ steps.detect.outputs.node-versions }}
-      has-typescript: ${{ steps.detect.outputs.has-typescript }}
-      has-eslint: ${{ steps.detect.outputs.has-eslint }}
-      has-prettier: ${{ steps.detect.outputs.has-prettier }}
-      has-build: ${{ steps.detect.outputs.has-build }}
-      has-test: ${{ steps.detect.outputs.has-test }}
-      has-size-limit: ${{ steps.detect.outputs.has-size-limit }}
-      is-monorepo: ${{ steps.detect.outputs.is-monorepo }}
-      package-manager: ${{ steps.detect.outputs.package-manager }}
-      build-command: ${{ steps.detect.outputs.build-command }}
-      test-command: ${{ steps.detect.outputs.test-command }}
-      lint-command: ${{ steps.detect.outputs.lint-command }}
-      format-command: ${{ steps.detect.outputs.format-command }}
-      typecheck-command: ${{ steps.detect.outputs.typecheck-command }}
-      install-command: ${{ steps.detect.outputs.install-command }}
-      audit-command: ${{ steps.detect.outputs.audit-command }}
-      license-check: ${{ steps.detect.outputs.license-check }}
-      security-audit: ${{ steps.detect.outputs.security-audit }}
-      audit-level: ${{ steps.detect.outputs.audit-level }}
-      has-python: ${{ steps.detect.outputs.has-python }}
-      has-go: ${{ steps.detect.outputs.has-go }}
-      has-rust: ${{ steps.detect.outputs.has-rust }}
+      node-versions: ${{ steps.detect.outputs['node-versions'] }}
+      has-typescript: ${{ steps.detect.outputs['has-typescript'] }}
+      has-eslint: ${{ steps.detect.outputs['has-eslint'] }}
+      has-prettier: ${{ steps.detect.outputs['has-prettier'] }}
+      has-build: ${{ steps.detect.outputs['has-build'] }}
+      has-test: ${{ steps.detect.outputs['has-test'] }}
+      has-size-limit: ${{ steps.detect.outputs['has-size-limit'] }}
+      is-monorepo: ${{ steps.detect.outputs['is-monorepo'] }}
+      package-manager: ${{ steps.detect.outputs['package-manager'] }}
+      build-command: ${{ steps.detect.outputs['build-command'] }}
+      test-command: ${{ steps.detect.outputs['test-command'] }}
+      lint-command: ${{ steps.detect.outputs['lint-command'] }}
+      format-command: ${{ steps.detect.outputs['format-command'] }}
+      typecheck-command: ${{ steps.detect.outputs['typecheck-command'] }}
+      install-command: ${{ steps.detect.outputs['install-command'] }}
+      audit-command: ${{ steps.detect.outputs['audit-command'] }}
+      license-check: ${{ steps.detect.outputs['license-check'] }}
+      security-audit: ${{ steps.detect.outputs['security-audit'] }}
+      audit-level: ${{ steps.detect.outputs['audit-level'] }}
+      has-python: ${{ steps.detect.outputs['has-python'] }}
+      has-go: ${{ steps.detect.outputs['has-go'] }}
+      has-rust: ${{ steps.detect.outputs['has-rust'] }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -131,7 +131,7 @@ jobs:
         shell: bash
         run: |
           # === Package manager ===
-          PM_OVERRIDE="${{ inputs.package-manager }}"
+          PM_OVERRIDE="${{ inputs['package-manager'] }}"
           if [ -n "$PM_OVERRIDE" ]; then
             PM="$PM_OVERRIDE"
             if [ "$PM" = "pnpm" ]; then
@@ -257,20 +257,20 @@ jobs:
             if [ -n "$input" ]; then echo "$input"; else echo "$detected"; fi
           }
 
-          OUT_TS=$(resolve_bool "${{ inputs.has-typescript }}" "$DET_TS")
-          OUT_ESLINT=$(resolve_bool "${{ inputs.has-eslint }}" "$DET_ESLINT")
-          OUT_PRETTIER=$(resolve_bool "${{ inputs.has-prettier }}" "$DET_PRETTIER")
-          OUT_BUILD=$(resolve_bool "${{ inputs.has-build }}" "$HAS_SCRIPT_BUILD")
-          OUT_SIZE=$(resolve_bool "${{ inputs.bundle-size }}" "$DET_SIZE")
-          OUT_LICENSE=$(resolve_bool "${{ inputs.license-check }}" "true")
-          OUT_AUDIT=$(resolve_bool "${{ inputs.security-audit }}" "true")
-          OUT_AUDIT_LVL=$(resolve_str "${{ inputs.audit-level }}" "critical")
-          OUT_NODE=$(resolve_str "${{ inputs.node-versions }}" "$NODE_VERSIONS")
-          OUT_BUILD_CMD=$(resolve_str "${{ inputs.build-command }}" "$BUILD_CMD")
-          OUT_TEST_CMD=$(resolve_str "${{ inputs.test-command }}" "$TEST_CMD")
-          OUT_LINT_CMD=$(resolve_str "${{ inputs.lint-command }}" "$LINT_CMD")
-          OUT_FORMAT_CMD=$(resolve_str "${{ inputs.format-command }}" "$FORMAT_CMD")
-          OUT_TC_CMD=$(resolve_str "${{ inputs.typecheck-command }}" "$TC_CMD")
+          OUT_TS=$(resolve_bool "${{ inputs['has-typescript'] }}" "$DET_TS")
+          OUT_ESLINT=$(resolve_bool "${{ inputs['has-eslint'] }}" "$DET_ESLINT")
+          OUT_PRETTIER=$(resolve_bool "${{ inputs['has-prettier'] }}" "$DET_PRETTIER")
+          OUT_BUILD=$(resolve_bool "${{ inputs['has-build'] }}" "$HAS_SCRIPT_BUILD")
+          OUT_SIZE=$(resolve_bool "${{ inputs['bundle-size'] }}" "$DET_SIZE")
+          OUT_LICENSE=$(resolve_bool "${{ inputs['license-check'] }}" "true")
+          OUT_AUDIT=$(resolve_bool "${{ inputs['security-audit'] }}" "true")
+          OUT_AUDIT_LVL=$(resolve_str "${{ inputs['audit-level'] }}" "critical")
+          OUT_NODE=$(resolve_str "${{ inputs['node-versions'] }}" "$NODE_VERSIONS")
+          OUT_BUILD_CMD=$(resolve_str "${{ inputs['build-command'] }}" "$BUILD_CMD")
+          OUT_TEST_CMD=$(resolve_str "${{ inputs['test-command'] }}" "$TEST_CMD")
+          OUT_LINT_CMD=$(resolve_str "${{ inputs['lint-command'] }}" "$LINT_CMD")
+          OUT_FORMAT_CMD=$(resolve_str "${{ inputs['format-command'] }}" "$FORMAT_CMD")
+          OUT_TC_CMD=$(resolve_str "${{ inputs['typecheck-command'] }}" "$TC_CMD")
           if [ "$PM" = "pnpm" ]; then
             AUDIT_RUN="pnpm audit --audit-level=${OUT_AUDIT_LVL}"
           elif [ "$PM" = "yarn" ]; then
@@ -333,13 +333,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: ${{ needs.detect.outputs.package-manager }}
+          cache: ${{ needs.detect.outputs['package-manager'] }}
 
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
 
-      - run: ${{ needs.detect.outputs.install-command }}
+      - run: ${{ needs.detect.outputs['install-command'] }}
 
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -352,22 +352,22 @@ jobs:
     timeout-minutes: 5
     needs: detect
     outputs:
-      gate-codeql: ${{ steps.policy.outputs.gate-codeql }}
-      gate-dependency-review: ${{ steps.policy.outputs.gate-dependency-review }}
-      gate-sbom: ${{ steps.policy.outputs.gate-sbom }}
-      gate-slsa-provenance: ${{ steps.policy.outputs.gate-slsa-provenance }}
-      gate-ossf-scorecard: ${{ steps.policy.outputs.gate-ossf-scorecard }}
+      gate-codeql: ${{ steps.policy.outputs['gate-codeql'] }}
+      gate-dependency-review: ${{ steps.policy.outputs['gate-dependency-review'] }}
+      gate-sbom: ${{ steps.policy.outputs['gate-sbom'] }}
+      gate-slsa-provenance: ${{ steps.policy.outputs['gate-slsa-provenance'] }}
+      gate-ossf-scorecard: ${{ steps.policy.outputs['gate-ossf-scorecard'] }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Validate .citemplate.yml
         id: policy
         shell: bash
         env:
-          INPUT_GATE_CODEQL: ${{ inputs.gate-codeql }}
-          INPUT_GATE_DEPENDENCY_REVIEW: ${{ inputs.gate-dependency-review }}
-          INPUT_GATE_SBOM: ${{ inputs.gate-sbom }}
-          INPUT_GATE_SLSA_PROVENANCE: ${{ inputs.gate-slsa-provenance }}
-          INPUT_GATE_OSSF_SCORECARD: ${{ inputs.gate-ossf-scorecard }}
+          INPUT_GATE_CODEQL: ${{ inputs['gate-codeql'] }}
+          INPUT_GATE_DEPENDENCY_REVIEW: ${{ inputs['gate-dependency-review'] }}
+          INPUT_GATE_SBOM: ${{ inputs['gate-sbom'] }}
+          INPUT_GATE_SLSA_PROVENANCE: ${{ inputs['gate-slsa-provenance'] }}
+          INPUT_GATE_OSSF_SCORECARD: ${{ inputs['gate-ossf-scorecard'] }}
         run: |
           bool_or() {
             local a="$1"
@@ -470,14 +470,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.has-eslint == 'true'
+    if: needs.detect.outputs['has-eslint'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -485,21 +485,21 @@ jobs:
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - name: Verify lint script exists
         run: node -e "const s=require('./package.json').scripts||{}; if(!s.lint){console.error('❌ No \"lint\" script found in package.json. Add one or set has-eslint to false.');process.exit(1)}"
-      - run: ${{ needs.detect.outputs.lint-command }}
+      - run: ${{ needs.detect.outputs['lint-command'] }}
 
   format:
     name: Format
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.has-prettier == 'true'
+    if: needs.detect.outputs['has-prettier'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -507,21 +507,21 @@ jobs:
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - name: Verify format script exists
         run: node -e "const s=require('./package.json').scripts||{}; if(!s['format:check']&&!s.format){console.error('❌ No \"format:check\" or \"format\" script found in package.json. Add one or set has-prettier to false.');process.exit(1)}"
-      - run: ${{ needs.detect.outputs.format-command }}
+      - run: ${{ needs.detect.outputs['format-command'] }}
 
   typecheck:
     name: Type check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.has-typescript == 'true'
+    if: needs.detect.outputs['has-typescript'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -529,27 +529,27 @@ jobs:
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - name: Verify typecheck script exists
         run: node -e "const s=require('./package.json').scripts||{}; if(!s.typecheck&&!s['type-check']){console.error('❌ No \"typecheck\" script found in package.json. Add one or set has-typescript to false.');process.exit(1)}"
-      - run: ${{ needs.detect.outputs.typecheck-command }}
+      - run: ${{ needs.detect.outputs['typecheck-command'] }}
 
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.has-build == 'true'
+    if: needs.detect.outputs['has-build'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
-      - run: ${{ needs.detect.outputs.build-command }}
+      - run: ${{ needs.detect.outputs['build-command'] }}
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: dist
@@ -560,63 +560,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [detect, build]
-    if: ${{ always() && needs.detect.outputs.has-test == 'true' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    if: ${{ always() && needs.detect.outputs['has-test'] == 'true' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     strategy:
       matrix:
-        node-version: ${{ fromJson(needs.detect.outputs.node-versions) }}
+        node-version: ${{ fromJson(needs.detect.outputs['node-versions']) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: ${{ needs.detect.outputs.package-manager }}
+          cache: ${{ needs.detect.outputs['package-manager'] }}
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - name: Install dependencies
-        run: ${{ needs.detect.outputs.install-command }}
+        run: ${{ needs.detect.outputs['install-command'] }}
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
-        if: needs.detect.outputs.has-build == 'true'
+        if: needs.detect.outputs['has-build'] == 'true'
         with:
           path: dist
           key: dist-${{ github.sha }}
       - name: Verify test script exists
         run: node -e "const s=require('./package.json').scripts||{}; if(!s.test||s.test.includes('no test specified')){console.error('❌ No \"test\" script found in package.json.');process.exit(1)}"
-      - run: ${{ needs.detect.outputs.test-command }}
+      - run: ${{ needs.detect.outputs['test-command'] }}
 
   security-audit:
     name: Security audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.security-audit == 'true'
+    if: needs.detect.outputs['security-audit'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
-      - run: ${{ needs.detect.outputs.audit-command }}
+      - run: ${{ needs.detect.outputs['audit-command'] }}
 
   license-check:
     name: License check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install]
-    if: needs.detect.outputs.license-check == 'true'
+    if: needs.detect.outputs['license-check'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -629,14 +629,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, install, build]
-    if: ${{ needs.detect.outputs.has-size-limit == 'true' && always() && needs.install.result == 'success' && needs.build.result == 'success' }}
+    if: ${{ needs.detect.outputs['has-size-limit'] == 'true' && always() && needs.install.result == 'success' && needs.build.result == 'success' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Enable corepack
-        if: needs.detect.outputs.package-manager != 'npm'
+        if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -651,14 +651,14 @@ jobs:
   quality-gates:
     name: Quality gates
     needs: [policy]
-    if: ${{ needs.policy.outputs.gate-codeql == 'true' || needs.policy.outputs.gate-dependency-review == 'true' || needs.policy.outputs.gate-sbom == 'true' || needs.policy.outputs.gate-slsa-provenance == 'true' || needs.policy.outputs.gate-ossf-scorecard == 'true' }}
+    if: ${{ needs.policy.outputs['gate-codeql'] == 'true' || needs.policy.outputs['gate-dependency-review'] == 'true' || needs.policy.outputs['gate-sbom'] == 'true' || needs.policy.outputs['gate-slsa-provenance'] == 'true' || needs.policy.outputs['gate-ossf-scorecard'] == 'true' }}
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
     with:
-      codeql: ${{ needs.policy.outputs.gate-codeql == 'true' }}
-      dependency-review: ${{ needs.policy.outputs.gate-dependency-review == 'true' }}
-      sbom: ${{ needs.policy.outputs.gate-sbom == 'true' }}
-      slsa-provenance: ${{ needs.policy.outputs.gate-slsa-provenance == 'true' }}
-      ossf-scorecard: ${{ needs.policy.outputs.gate-ossf-scorecard == 'true' }}
+      codeql: ${{ needs.policy.outputs['gate-codeql'] == 'true' }}
+      dependency-review: ${{ needs.policy.outputs['gate-dependency-review'] == 'true' }}
+      sbom: ${{ needs.policy.outputs['gate-sbom'] == 'true' }}
+      slsa-provenance: ${{ needs.policy.outputs['gate-slsa-provenance'] == 'true' }}
+      ossf-scorecard: ${{ needs.policy.outputs['gate-ossf-scorecard'] == 'true' }}
 
   pr-feedback:
     name: PR feedback
@@ -679,10 +679,10 @@ jobs:
           RES_TYPECHECK: ${{ needs.typecheck.result }}
           RES_BUILD: ${{ needs.build.result }}
           RES_TEST: ${{ needs.test.result }}
-          RES_AUDIT: ${{ needs.security-audit.result }}
-          RES_LICENSE: ${{ needs.license-check.result }}
-          RES_BUNDLE: ${{ needs.bundle-size.result }}
-          RES_QUALITY_GATES: ${{ needs.quality-gates.result }}
+          RES_AUDIT: ${{ needs['security-audit'].result }}
+          RES_LICENSE: ${{ needs['license-check'].result }}
+          RES_BUNDLE: ${{ needs['bundle-size'].result }}
+          RES_QUALITY_GATES: ${{ needs['quality-gates'].result }}
         shell: bash
         run: |
           MARKER="<!-- launchpad:aggregated-feedback -->"
