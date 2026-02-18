@@ -1,0 +1,26 @@
+# Reusable commitlint workflow — called by consumer repos
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/commitlint.yml@main
+
+name: Commitlint
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Lint commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}

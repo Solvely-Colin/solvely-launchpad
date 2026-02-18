@@ -1,21 +1,30 @@
-# Coverage — runs after merge to main
-# Tier 2: Post-merge coverage tracking
-#
-# Generates a coverage report and uploads as artifact.
-# Extend this to post to Codecov, Coveralls, etc.
+# Reusable coverage workflow — called by consumer repos
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@main
 
 name: Tests & Coverage
 
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        type: string
+        default: '22'
+      coverage-command:
+        description: 'Coverage command'
+        type: string
+        default: 'npx vitest run --coverage'
+      has-build:
+        description: 'Run build before coverage'
+        type: boolean
+        default: true
+      build-command:
+        description: 'Build command'
+        type: string
+        default: 'npm run build'
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   coverage:
@@ -27,14 +36,17 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: ${{ inputs.node-version }}
           cache: npm
 
       - run: npm ci
-      - run: npm run build
+
+      - name: Build
+        if: ${{ inputs.has-build }}
+        run: ${{ inputs.build-command }}
 
       - name: Run tests with coverage
-        run: npx vitest run --coverage
+        run: ${{ inputs.coverage-command }}
 
       - name: Upload coverage artifact
         if: always()

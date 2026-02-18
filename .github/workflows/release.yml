@@ -1,14 +1,31 @@
-# Release — runs when a GitHub Release is published
-# Tier 3: Automated npm publish + release notes + smoke test
-#
-# Prerequisites: NPM_TOKEN secret with publish access
-# TODO: For web apps, replace npm publish with your deploy command (e.g., Vercel, AWS)
+# Reusable release workflow — called by consumer repos
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/release.yml@main
 
 name: Release to npm
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        type: string
+        default: '22'
+      package-name:
+        description: 'npm package name for smoke test'
+        type: string
+        required: true
+      smoke-test-command:
+        description: 'Custom smoke test command (empty = default npx check)'
+        type: string
+        default: ''
+      npm-publish:
+        description: 'Publish to npm'
+        type: boolean
+        default: true
+    secrets:
+      npm-token:
+        description: 'NPM_TOKEN for publishing'
+        required: false
 
 permissions: {}
 
@@ -17,6 +34,7 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: ${{ inputs.npm-publish }}
     permissions:
       contents: read
     steps:
@@ -24,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: ${{ inputs.node-version }}
           cache: npm
           registry-url: https://registry.npmjs.org
 
@@ -32,11 +50,12 @@ jobs:
       - run: npm run build
       - run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
 
   release-notes:
     name: Generate release notes
     needs: publish
+    if: ${{ always() && (needs.publish.result == 'success' || needs.publish.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -49,10 +68,9 @@ jobs:
           generate_release_notes: true
 
   smoke-test:
-    # Verifies the published package is installable and runs
-    # TODO: update package name and CLI command for your project
     name: Post-publish smoke test
     needs: publish
+    if: ${{ inputs.npm-publish }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -60,17 +78,24 @@ jobs:
     steps:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: ${{ inputs.node-version }}
           registry-url: https://registry.npmjs.org
 
       - name: Wait for npm propagation and verify
         run: |
           VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
-          PACKAGE="<package-name>"  # TODO: replace with your npm package name
+          PACKAGE="${{ inputs.package-name }}"
           for i in $(seq 1 12); do
             npm view ${PACKAGE}@$VERSION version && break || sleep 10
           done
-          # TODO: replace with your CLI command or a simple import test:
-          #   npx -p ${PACKAGE}@$VERSION <your-cli> --version
-          #   node -e "require('${PACKAGE}')"
-          echo "Smoke test: ${PACKAGE}@${VERSION} published successfully"
+
+      - name: Smoke test
+        run: |
+          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          PACKAGE="${{ inputs.package-name }}"
+          CUSTOM_CMD="${{ inputs.smoke-test-command }}"
+          if [ -n "$CUSTOM_CMD" ]; then
+            eval "$CUSTOM_CMD"
+          else
+            npx -p ${PACKAGE}@$VERSION -c "echo '${PACKAGE}@${VERSION} installed successfully'"
+          fi

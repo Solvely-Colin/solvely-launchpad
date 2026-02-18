@@ -1,12 +1,27 @@
-# Scheduled — weekly maintenance
-# Tier 4: Automated hygiene (dependency audit + stale issue cleanup)
+# Reusable scheduled maintenance workflow — called by consumer repos
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/scheduled.yml@main
 
 name: Scheduled Maintenance
 
 on:
-  schedule:
-    - cron: '0 9 * * 1' # Monday 9am UTC
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      stale-days:
+        description: 'Days before marking issues stale'
+        type: number
+        default: 60
+      stale-close-days:
+        description: 'Days after stale before closing'
+        type: number
+        default: 14
+      audit-level:
+        description: 'npm audit level'
+        type: string
+        default: 'high'
+      exempt-labels:
+        description: 'Comma-separated labels exempt from stale'
+        type: string
+        default: 'pinned,security,enhancement'
 
 permissions:
   contents: read
@@ -24,7 +39,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=${{ inputs.audit-level }}
 
   stale:
     name: Stale issues
@@ -34,7 +49,7 @@ jobs:
       - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9
         with:
           stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs.'
-          days-before-stale: 60
-          days-before-close: 14
+          days-before-stale: ${{ inputs.stale-days }}
+          days-before-close: ${{ inputs.stale-close-days }}
           stale-issue-label: stale
-          exempt-issue-labels: 'pinned,security,enhancement'
+          exempt-issue-labels: ${{ inputs.exempt-labels }}

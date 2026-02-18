@@ -1,141 +1,452 @@
-# CI — runs on every PR and push to main
-# Tier 1: Fast feedback on every change
-#
-# Jobs: install → lint, format, typecheck, security-audit, license-check (parallel)
-#        → build → test (matrix), bundle-size (parallel)
-#        + commitlint (PRs only)
+# Reusable CI workflow — zero-config with auto-detection, fully overridable
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
 
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_call:
+    inputs:
+      node-versions:
+        description: 'JSON array of Node versions for test matrix (auto-detected from .nvmrc)'
+        type: string
+        default: ''
+      has-typescript:
+        description: 'Run typecheck (auto-detected from tsconfig.json)'
+        type: string
+        default: ''
+      has-eslint:
+        description: 'Run lint (auto-detected from eslint config)'
+        type: string
+        default: ''
+      has-prettier:
+        description: 'Run format:check (auto-detected from prettier config)'
+        type: string
+        default: ''
+      has-build:
+        description: 'Run build step (auto-detected from package.json scripts)'
+        type: string
+        default: ''
+      build-command:
+        description: 'Custom build command (auto-detected)'
+        type: string
+        default: ''
+      test-command:
+        description: 'Custom test command (auto-detected)'
+        type: string
+        default: ''
+      lint-command:
+        description: 'Custom lint command (auto-detected)'
+        type: string
+        default: ''
+      format-command:
+        description: 'Custom format check command (auto-detected)'
+        type: string
+        default: ''
+      typecheck-command:
+        description: 'Custom typecheck command (auto-detected)'
+        type: string
+        default: ''
+      bundle-size:
+        description: 'Run size-limit check (auto-detected from .size-limit.json)'
+        type: string
+        default: ''
+      license-check:
+        description: 'Run license checker (default: true)'
+        type: string
+        default: ''
+      security-audit:
+        description: 'Run npm audit (default: true)'
+        type: string
+        default: ''
+      audit-level:
+        description: 'npm audit level'
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  detect:
+    name: Auto-detect project
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      node-versions: ${{ steps.detect.outputs.node-versions }}
+      has-typescript: ${{ steps.detect.outputs.has-typescript }}
+      has-eslint: ${{ steps.detect.outputs.has-eslint }}
+      has-prettier: ${{ steps.detect.outputs.has-prettier }}
+      has-build: ${{ steps.detect.outputs.has-build }}
+      has-test: ${{ steps.detect.outputs.has-test }}
+      has-size-limit: ${{ steps.detect.outputs.has-size-limit }}
+      is-monorepo: ${{ steps.detect.outputs.is-monorepo }}
+      package-manager: ${{ steps.detect.outputs.package-manager }}
+      build-command: ${{ steps.detect.outputs.build-command }}
+      test-command: ${{ steps.detect.outputs.test-command }}
+      lint-command: ${{ steps.detect.outputs.lint-command }}
+      format-command: ${{ steps.detect.outputs.format-command }}
+      typecheck-command: ${{ steps.detect.outputs.typecheck-command }}
+      install-command: ${{ steps.detect.outputs.install-command }}
+      license-check: ${{ steps.detect.outputs.license-check }}
+      security-audit: ${{ steps.detect.outputs.security-audit }}
+      audit-level: ${{ steps.detect.outputs.audit-level }}
+      has-python: ${{ steps.detect.outputs.has-python }}
+      has-go: ${{ steps.detect.outputs.has-go }}
+      has-rust: ${{ steps.detect.outputs.has-rust }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          sparse-checkout: |
+            package.json
+            package-lock.json
+            pnpm-lock.yaml
+            yarn.lock
+            tsconfig.json
+            turbo.json
+            pnpm-workspace.yaml
+            .nvmrc
+            .node-version
+            .size-limit.json
+            .eslintrc
+            .eslintrc.js
+            .eslintrc.json
+            .eslintrc.yml
+            .eslintrc.yaml
+            eslint.config.js
+            eslint.config.mjs
+            eslint.config.cjs
+            eslint.config.ts
+            .prettierrc
+            .prettierrc.js
+            .prettierrc.json
+            .prettierrc.yml
+            .prettierrc.yaml
+            .prettierrc.toml
+            prettier.config.js
+            prettier.config.mjs
+            prettier.config.cjs
+            pyproject.toml
+            go.mod
+            Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - name: Detect project configuration
+        id: detect
+        shell: bash
+        run: |
+          # === Package manager ===
+          if [ -f "pnpm-lock.yaml" ]; then
+            PM="pnpm"
+            INSTALL="pnpm install --frozen-lockfile"
+          elif [ -f "yarn.lock" ]; then
+            PM="yarn"
+            INSTALL="yarn install --frozen-lockfile"
+          else
+            PM="npm"
+            INSTALL="npm ci"
+          fi
+
+          # === Monorepo ===
+          IS_MONOREPO="false"
+          if [ -f "turbo.json" ] || [ -f "pnpm-workspace.yaml" ]; then
+            IS_MONOREPO="true"
+          elif [ -f "package.json" ] && node -e "const p=require('./package.json'); process.exit(p.workspaces ? 0 : 1)" 2>/dev/null; then
+            IS_MONOREPO="true"
+          fi
+
+          # === Package.json scripts ===
+          HAS_SCRIPT_BUILD="false"
+          HAS_SCRIPT_TEST="false"
+          HAS_SCRIPT_LINT="false"
+          HAS_SCRIPT_FORMAT="false"
+          HAS_SCRIPT_TYPECHECK="false"
+          if [ -f "package.json" ]; then
+            HAS_SCRIPT_BUILD=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.build)" 2>/dev/null || echo "false")
+            HAS_SCRIPT_TEST=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.test && !s.test.includes('no test specified'))" 2>/dev/null || echo "false")
+            HAS_SCRIPT_LINT=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.lint)" 2>/dev/null || echo "false")
+            HAS_SCRIPT_FORMAT=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!(s['format:check']||s.format))" 2>/dev/null || echo "false")
+            HAS_SCRIPT_TYPECHECK=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!(s.typecheck||s['type-check']))" 2>/dev/null || echo "false")
+          fi
+
+          # === TypeScript ===
+          DET_TS="false"
+          [ -f "tsconfig.json" ] && DET_TS="true"
+
+          # === ESLint ===
+          DET_ESLINT="false"
+          for f in .eslintrc .eslintrc.js .eslintrc.json .eslintrc.yml .eslintrc.yaml \
+                   eslint.config.js eslint.config.mjs eslint.config.cjs eslint.config.ts; do
+            [ -f "$f" ] && DET_ESLINT="true" && break
+          done
+          # Also check package.json eslintConfig
+          if [ "$DET_ESLINT" = "false" ] && [ -f "package.json" ]; then
+            node -e "process.exit(require('./package.json').eslintConfig ? 0 : 1)" 2>/dev/null && DET_ESLINT="true"
+          fi
+
+          # === Prettier ===
+          DET_PRETTIER="false"
+          for f in .prettierrc .prettierrc.js .prettierrc.json .prettierrc.yml .prettierrc.yaml \
+                   .prettierrc.toml prettier.config.js prettier.config.mjs prettier.config.cjs; do
+            [ -f "$f" ] && DET_PRETTIER="true" && break
+          done
+          if [ "$DET_PRETTIER" = "false" ] && [ -f "package.json" ]; then
+            node -e "process.exit(require('./package.json').prettier ? 0 : 1)" 2>/dev/null && DET_PRETTIER="true"
+          fi
+
+          # === Size limit ===
+          DET_SIZE="false"
+          [ -f ".size-limit.json" ] && DET_SIZE="true"
+
+          # === Node versions ===
+          NODE_VERSIONS='["20","22"]'
+          if [ -f ".nvmrc" ]; then
+            NV=$(cat .nvmrc | tr -d 'v \n')
+            NODE_VERSIONS="[\"${NV}\"]"
+          elif [ -f ".node-version" ]; then
+            NV=$(cat .node-version | tr -d 'v \n')
+            NODE_VERSIONS="[\"${NV}\"]"
+          fi
+
+          # === Other languages ===
+          HAS_PYTHON="false"; [ -f "pyproject.toml" ] && HAS_PYTHON="true"
+          HAS_GO="false"; [ -f "go.mod" ] && HAS_GO="true"
+          HAS_RUST="false"; [ -f "Cargo.toml" ] && HAS_RUST="true"
+
+          # === Commands (turbo variants for monorepos) ===
+          if [ "$IS_MONOREPO" = "true" ] && [ -f "turbo.json" ]; then
+            PREFIX="turbo"
+          elif [ "$PM" = "pnpm" ]; then
+            PREFIX="pnpm run"
+          elif [ "$PM" = "yarn" ]; then
+            PREFIX="yarn"
+          else
+            PREFIX="npm run"
+          fi
+
+          if [ "$IS_MONOREPO" = "true" ] && [ -f "turbo.json" ]; then
+            BUILD_CMD="turbo build"
+            TEST_CMD="turbo test"
+            LINT_CMD="turbo lint"
+            FORMAT_CMD="turbo format:check"
+            TC_CMD="turbo typecheck"
+          else
+            BUILD_CMD="${PREFIX} build"
+            TEST_CMD="${PM} test"
+            LINT_CMD="${PREFIX} lint"
+            FORMAT_CMD="${PREFIX} format:check"
+            TC_CMD="${PREFIX} typecheck"
+          fi
+
+          # === Apply overrides (input beats detection) ===
+          # Helper: resolve "true"/"false"/empty to detected value
+          resolve_bool() {
+            local input="$1" detected="$2"
+            if [ -n "$input" ]; then echo "$input"; else echo "$detected"; fi
+          }
+          resolve_str() {
+            local input="$1" detected="$2"
+            if [ -n "$input" ]; then echo "$input"; else echo "$detected"; fi
+          }
+
+          OUT_TS=$(resolve_bool "${{ inputs.has-typescript }}" "$DET_TS")
+          OUT_ESLINT=$(resolve_bool "${{ inputs.has-eslint }}" "$DET_ESLINT")
+          OUT_PRETTIER=$(resolve_bool "${{ inputs.has-prettier }}" "$DET_PRETTIER")
+          OUT_BUILD=$(resolve_bool "${{ inputs.has-build }}" "$HAS_SCRIPT_BUILD")
+          OUT_SIZE=$(resolve_bool "${{ inputs.bundle-size }}" "$DET_SIZE")
+          OUT_LICENSE=$(resolve_bool "${{ inputs.license-check }}" "true")
+          OUT_AUDIT=$(resolve_bool "${{ inputs.security-audit }}" "true")
+          OUT_AUDIT_LVL=$(resolve_str "${{ inputs.audit-level }}" "critical")
+          OUT_NODE=$(resolve_str "${{ inputs.node-versions }}" "$NODE_VERSIONS")
+          OUT_BUILD_CMD=$(resolve_str "${{ inputs.build-command }}" "$BUILD_CMD")
+          OUT_TEST_CMD=$(resolve_str "${{ inputs.test-command }}" "$TEST_CMD")
+          OUT_LINT_CMD=$(resolve_str "${{ inputs.lint-command }}" "$LINT_CMD")
+          OUT_FORMAT_CMD=$(resolve_str "${{ inputs.format-command }}" "$FORMAT_CMD")
+          OUT_TC_CMD=$(resolve_str "${{ inputs.typecheck-command }}" "$TC_CMD")
+
+          # === Write outputs ===
+          {
+            echo "node-versions=${OUT_NODE}"
+            echo "has-typescript=${OUT_TS}"
+            echo "has-eslint=${OUT_ESLINT}"
+            echo "has-prettier=${OUT_PRETTIER}"
+            echo "has-build=${OUT_BUILD}"
+            echo "has-test=${HAS_SCRIPT_TEST}"
+            echo "has-size-limit=${OUT_SIZE}"
+            echo "is-monorepo=${IS_MONOREPO}"
+            echo "package-manager=${PM}"
+            echo "build-command=${OUT_BUILD_CMD}"
+            echo "test-command=${OUT_TEST_CMD}"
+            echo "lint-command=${OUT_LINT_CMD}"
+            echo "format-command=${OUT_FORMAT_CMD}"
+            echo "typecheck-command=${OUT_TC_CMD}"
+            echo "install-command=${INSTALL}"
+            echo "license-check=${OUT_LICENSE}"
+            echo "security-audit=${OUT_AUDIT}"
+            echo "audit-level=${OUT_AUDIT_LVL}"
+            echo "has-python=${HAS_PYTHON}"
+            echo "has-go=${HAS_GO}"
+            echo "has-rust=${HAS_RUST}"
+          } >> "$GITHUB_OUTPUT"
+
+          # === Summary ===
+          echo "## 🔍 Auto-Detection Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Setting | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package manager | \`${PM}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Monorepo | ${IS_MONOREPO} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Node versions | \`${OUT_NODE}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| TypeScript | ${OUT_TS} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ESLint | ${OUT_ESLINT} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Prettier | ${OUT_PRETTIER} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ${OUT_BUILD} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tests | ${HAS_SCRIPT_TEST} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Size limit | ${OUT_SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Python | ${HAS_PYTHON} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Go | ${HAS_GO} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Rust | ${HAS_RUST} |" >> "$GITHUB_STEP_SUMMARY"
+
   install:
     name: Install dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    needs: detect
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: npm
+          cache: ${{ needs.detect.outputs.package-manager }}
 
-      - run: npm ci
+      - name: Install with pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
+
+      - run: ${{ needs.detect.outputs.install-command }}
 
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.has-eslint == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-      - run: npm run lint
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: ${{ needs.detect.outputs.lint-command }}
 
   format:
     name: Format
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.has-prettier == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-      - run: npm run format:check
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: ${{ needs.detect.outputs.format-command }}
 
   typecheck:
     name: Type check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.has-typescript == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-      - run: npm run typecheck
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: ${{ needs.detect.outputs.typecheck-command }}
 
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.has-build == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-      - run: npm run build
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: ${{ needs.detect.outputs.build-command }}
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
-          path: dist  # TODO: update to your build output directory (e.g., .next, build, dist)
+          path: dist
           key: dist-${{ github.sha }}
 
   test:
     name: Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: [detect, install, build]
+    if: ${{ always() && needs.detect.outputs.has-test == 'true' && needs.install.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     strategy:
       matrix:
-        node-version: [20, 22]  # TODO: adjust Node versions for your project
+        node-version: ${{ fromJson(needs.detect.outputs.node-versions) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Enable pnpm
+        if: needs.detect.outputs.package-manager == 'pnpm'
+        run: corepack enable pnpm
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        if: needs.detect.outputs.has-build == 'true'
         with:
           path: dist
           key: dist-${{ github.sha }}
-      - run: npm test
+      - run: ${{ needs.detect.outputs.test-command }}
 
   security-audit:
     name: Security audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.security-audit == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -144,14 +455,15 @@ jobs:
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-      - run: npm audit --audit-level=critical
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: npm audit --audit-level=${{ needs.detect.outputs.audit-level }}
 
   license-check:
     name: License check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: install
+    needs: [detect, install]
+    if: needs.detect.outputs.license-check == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -160,16 +472,15 @@ jobs:
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - run: npx license-checker --failOn "GPL-2.0;GPL-3.0;AGPL-3.0;LGPL-2.0;LGPL-2.1;LGPL-3.0;SSPL-1.0;EUPL-1.1;EUPL-1.2"
 
   bundle-size:
-    # Checks bundle stays under configured limits in .size-limit.json
-    # TODO: remove this job if your project doesn't ship a bundle (e.g., web apps with Next.js)
     name: Bundle size check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: build
+    needs: [detect, install, build]
+    if: ${{ needs.detect.outputs.has-size-limit == 'true' && always() && needs.install.result == 'success' && needs.build.result == 'success' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -178,25 +489,9 @@ jobs:
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: dist
           key: dist-${{ github.sha }}
       - run: npx size-limit
-
-  commitlint:
-    name: Lint commits
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}

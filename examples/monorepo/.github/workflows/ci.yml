@@ -1,0 +1,16 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  ci:
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+    with:
+      build-command: 'turbo build'
+      test-command: 'turbo test'
+      lint-command: 'turbo lint'
+      has-prettier: false
+      has-typescript: false
+      bundle-size: false

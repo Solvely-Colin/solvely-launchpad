@@ -1,0 +1,15 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  ci:
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+    with:
+      has-typescript: true
+      has-prettier: true
+      bundle-size: true
+  commitlint:
+    uses: Solvely-Colin/ci-template/.github/workflows/commitlint.yml@main

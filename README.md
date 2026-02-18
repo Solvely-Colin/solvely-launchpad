@@ -1,109 +1,135 @@
-# CI/CD Template
+# ci-template
 
-Battle-tested CI/CD configuration extracted from [Quorum](https://github.com/Solvely-Colin/quorum). Drop this into any Solvely repo and have production-grade CI in 5 minutes.
-
-## What's Included
-
-### 4 Tiers of CI/CD
-
-| Tier | Workflow | Trigger | What it does |
-|------|----------|---------|--------------|
-| 1 | **ci.yml** | PR + push to main | Lint, format, typecheck, build, test (Node 20+22), security audit, license check, bundle size, commitlint |
-| 2 | **coverage.yml** | Push to main | Full test suite with coverage report, uploaded as artifact |
-| 3 | **release.yml** | GitHub Release published | npm publish, auto release notes, post-publish smoke test |
-| 4 | **scheduled.yml** | Weekly (Monday 9am UTC) | Dependency audit, stale issue cleanup |
-
-### Also Included
-
-- **dependabot.yml** — Weekly updates for npm + GitHub Actions, grouped by minor/patch
-- **commitlint.config.js** — Enforces [Conventional Commits](https://www.conventionalcommits.org/)
-- **.size-limit.json** — Bundle size budgets via [size-limit](https://github.com/ai/size-limit)
-- **.lintstagedrc.json** — Pre-commit lint+format via [lint-staged](https://github.com/lint-staged/lint-staged)
-- **Husky hooks** — commit-msg (commitlint) + pre-commit (lint-staged)
-
-### Security Hardening
-
-- All GitHub Actions pinned to full SHA (not tags)
-- Scoped `permissions` on every workflow (least privilege)
-- `concurrency` groups to cancel stale runs
-- Timeouts on every job
-- License blocklist (GPL, AGPL, SSPL, EUPL)
-- Weekly security audits at `high` level, PR audits at `critical`
+Zero-config reusable GitHub Actions workflows. Auto-detects your project, runs the right checks.
 
 ## Quick Start
 
-### Option A: Automated Setup
+Create `.github/workflows/ci.yml` in your repo:
 
-```bash
-git clone https://github.com/Solvely-Colin/ci-template.git /tmp/ci-template
-/tmp/ci-template/setup.sh /path/to/your-repo
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
 ```
 
-### Option B: Manual Copy
+That's it. It detects TypeScript, ESLint, Prettier, build scripts, monorepo setup, package manager — and runs only what applies.
 
-1. Copy `.github/` directory into your repo
-2. Copy tooling configs to your repo root:
-   - `tooling/commitlint.config.js` → `commitlint.config.js`
-   - `tooling/.size-limit.json` → `.size-limit.json`
-   - `tooling/.lintstagedrc.json` → `.lintstagedrc.json`
-3. Install devDependencies:
-   ```bash
-   npm install -D @commitlint/cli @commitlint/config-conventional husky lint-staged size-limit @size-limit/file @vitest/coverage-v8
-   ```
-4. Set up husky:
-   ```bash
-   npx husky init
-   ```
-5. Copy `hooks/commit-msg` → `.husky/commit-msg` and `hooks/pre-commit` → `.husky/pre-commit`
+## How Auto-Detection Works
 
-## What to Customize
+The `detect` job inspects your repo before anything runs:
 
-### Every project
+| Detection | How |
+|-----------|-----|
+| **TypeScript** | `tsconfig.json` exists |
+| **ESLint** | `.eslintrc*` / `eslint.config.*` / `package.json:eslintConfig` |
+| **Prettier** | `.prettierrc*` / `prettier.config.*` / `package.json:prettier` |
+| **Build** | `package.json` has `build` script |
+| **Tests** | `package.json` has `test` script (not the default placeholder) |
+| **Bundle size** | `.size-limit.json` exists |
+| **Monorepo** | `turbo.json` / `pnpm-workspace.yaml` / `package.json:workspaces` |
+| **Package manager** | `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, else npm |
+| **Node versions** | `.nvmrc` / `.node-version`, or default `["20","22"]` |
+| **Python/Go/Rust** | `pyproject.toml` / `go.mod` / `Cargo.toml` (future use) |
 
-- **`.size-limit.json`** — Update `path` and `limit` for your bundle (or remove if not shipping a bundle)
-- **`release.yml`** — Replace `<package-name>` with your npm package name in the smoke test
-- **`ci.yml`** — Adjust the `dist` cache path if your build output goes elsewhere
+Monorepos with `turbo.json` automatically use `turbo build`, `turbo test`, etc.
 
-### Required `package.json` scripts
+### Overriding Detection
 
-```json
-{
-  "scripts": {
-    "lint": "eslint .",
-    "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
-    "build": "...",
-    "test": "vitest run"
-  }
-}
+Any explicit input **overrides** auto-detection. Mix and match:
+
+```yaml
+jobs:
+  ci:
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+    with:
+      has-prettier: false        # skip even if .prettierrc exists
+      test-command: 'node --test' # override detected test command
+      # everything else: auto-detected
 ```
 
-### For web apps (Next.js, Astro, etc.)
+## Available Workflows
 
-- Remove the **bundle-size** job from `ci.yml`
-- Replace `npm publish` in `release.yml` with your deploy command
-- Remove the **smoke-test** job from `release.yml`
-- Remove `size-limit` and `@size-limit/file` from devDependencies
+### `ci.yml` — PR Checks (Zero-Config)
 
-### For CLI / npm packages
+All inputs are optional. Empty string = auto-detect.
 
-Works out of the box. Just update the package name in the smoke test.
+| Input | Type | Auto-Detected From | Description |
+|-------|------|--------------------|-------------|
+| `node-versions` | string | `.nvmrc` / `["20","22"]` | JSON array of Node versions |
+| `has-typescript` | string | `tsconfig.json` | Run typecheck |
+| `has-eslint` | string | eslint config files | Run lint |
+| `has-prettier` | string | prettier config files | Run format:check |
+| `has-build` | string | `package.json` scripts | Run build step |
+| `build-command` | string | turbo/npm/pnpm/yarn | Build command |
+| `test-command` | string | turbo/npm/pnpm/yarn | Test command |
+| `lint-command` | string | turbo/npm/pnpm/yarn | Lint command |
+| `format-command` | string | turbo/npm/pnpm/yarn | Format command |
+| `typecheck-command` | string | turbo/npm/pnpm/yarn | Typecheck command |
+| `bundle-size` | string | `.size-limit.json` | Run size-limit |
+| `license-check` | string | default: true | License checker |
+| `security-audit` | string | default: true | npm audit |
+| `audit-level` | string | default: critical | Audit severity |
 
-## Required Secrets
+### `coverage.yml` — Post-Merge Coverage
 
-| Secret | Where | Purpose |
-|--------|-------|---------|
-| `NPM_TOKEN` | GitHub repo → Settings → Secrets → Actions | npm publish in release workflow |
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `node-version` | string | `22` | Node.js version |
+| `coverage-command` | string | `npx vitest run --coverage` | Coverage command |
+| `has-build` | boolean | `true` | Run build first |
+| `build-command` | string | `npm run build` | Build command |
 
-## Branch Protection (Recommended)
+### `release.yml` — npm Publish + Release Notes
 
-Go to **Settings → Branches → Add rule** for `main`:
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `node-version` | string | `22` | Node.js version |
+| `package-name` | string | **required** | npm package name |
+| `smoke-test-command` | string | `''` | Custom smoke test |
+| `npm-publish` | boolean | `true` | Publish to npm |
 
-- ✅ Require a pull request before merging
-- ✅ Require status checks to pass (select: Lint, Format, Type check, Build, Tests, Security audit, License check, Lint commits)
-- ✅ Require branches to be up to date
-- ✅ Do not allow bypassing the above settings
+Secrets: `npm-token` (required if `npm-publish`)
 
-## License
+### `scheduled.yml` — Weekly Maintenance
 
-MIT
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stale-days` | number | `60` | Days before stale |
+| `stale-close-days` | number | `14` | Days to close after stale |
+| `audit-level` | string | `high` | Audit severity |
+| `exempt-labels` | string | `pinned,security,enhancement` | Exempt labels |
+
+### `commitlint.yml` — PR Commit Linting
+
+No inputs needed.
+
+## Examples
+
+See `examples/` for ready-to-copy consumer workflows:
+
+- **`minimal/`** — Zero-config, just works
+- **`npm-package/`** — Libraries like Quorum (with release, coverage, commitlint)
+- **`web-app/`** — Next.js apps (override prettier/bundle-size off)
+- **`monorepo/`** — Turbo monorepos (override commands)
+
+## Reference Configs
+
+`tooling/` and `hooks/` directories contain reference configurations:
+
+- `tooling/commitlint.config.js` — Conventional commits
+- `tooling/.lintstagedrc.json` — lint-staged
+- `tooling/.size-limit.json` — Bundle size limits
+- `hooks/commit-msg` — Husky commit-msg hook
+- `hooks/pre-commit` — Husky pre-commit hook
+
+## Design Principles
+
+- **Zero-config** — Auto-detects everything, works out of the box
+- **Overridable** — Any input overrides detection
+- **SHA-pinned actions** — All third-party actions use commit SHAs
+- **Scoped permissions** — Minimal `permissions` blocks
+- **Concurrency control** — Cancel in-progress runs on same ref
+- **Timeouts** — Every job has a timeout
+- **Cache sharing** — Dependencies cached across jobs

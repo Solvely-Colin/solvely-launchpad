@@ -1,0 +1,11 @@
+name: Release
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    uses: Solvely-Colin/ci-template/.github/workflows/release.yml@main
+    with:
+      package-name: '@solvely/quorum'
+    secrets:
+      npm-token: ${{ secrets.NPM_TOKEN }}
