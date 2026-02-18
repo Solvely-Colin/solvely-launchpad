@@ -63,7 +63,7 @@ function renderCallerWorkflow(name, workflow, pm, overrides = {}) {
   const withPairs = Object.entries(overrides);
   const withLines = [pm ? `      package-manager: ${pm}` : null, ...withPairs.map(([k, v]) => `      ${k}: ${v}`)].filter(Boolean);
   const withBlock = withLines.length ? `\n    with:\n${withLines.join('\n')}` : '';
-  return `name: ${name}\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\nconcurrency:\n  group: \${{ github.workflow }}-\${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  ${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}:\n    uses: ${REPO_REF}/.github/workflows/${workflow}.yml@${VERSION_REF}${withBlock}\n`;
+  return `name: ${name}\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\npermissions:\n  contents: read\n  pull-requests: write\n\nconcurrency:\n  group: \${{ github.workflow }}-\${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  ${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}:\n    uses: ${REPO_REF}/.github/workflows/${workflow}.yml@${VERSION_REF}${withBlock}\n`;
 }
 
 function renderScheduledWorkflow(pm) {
@@ -190,36 +190,84 @@ function parseTopLevelKeys(yamlContent) {
 function commandDoctor(cwd) {
   const file = path.join(cwd, '.citemplate.yml');
   const warnings = [];
-  if (!fs.existsSync(file)) {
-    console.log('WARN: .citemplate.yml not found. Run init with --policy true to generate it.');
-    return;
-  }
-
-  const policy = fs.readFileSync(file, 'utf8');
-  const required = ['version:', 'preset:'];
-  for (const r of required) {
-    if (!policy.includes(r)) {
-      throw new Error(`Missing required policy key: ${r.replace(':', '')}`);
+  const hasPolicy = fs.existsSync(file);
+  let policy = '';
+  if (!hasPolicy) {
+    warnings.push('.citemplate.yml not found. Run init with --policy true to generate it.');
+  } else {
+    policy = fs.readFileSync(file, 'utf8');
+    const required = ['version:', 'preset:'];
+    for (const r of required) {
+      if (!policy.includes(r)) {
+        throw new Error(`Missing required policy key: ${r.replace(':', '')}`);
+      }
     }
-  }
 
-  const allowed = new Set(['version', 'preset', 'checks', 'pr_feedback', 'branches']);
-  const keys = parseTopLevelKeys(policy);
-  for (const k of keys) {
-    if (!allowed.has(k)) warnings.push(`Unknown top-level key: ${k}`);
+    const allowed = new Set(['version', 'preset', 'checks', 'pr_feedback', 'branches']);
+    const keys = parseTopLevelKeys(policy);
+    for (const k of keys) {
+      if (!allowed.has(k)) warnings.push(`Unknown top-level key: ${k}`);
+    }
   }
 
   const ciPath = path.join(cwd, '.github', 'workflows', 'ci.yml');
   if (!fs.existsSync(ciPath)) throw new Error('Missing .github/workflows/ci.yml');
+  const ciContent = fs.readFileSync(ciPath, 'utf8');
 
+  if (!/\npermissions:\n(?:[ \t].*\n)*[ \t]+contents:\s*read\b/m.test(ciContent)) {
+    warnings.push('Minimum caller contract missing `permissions.contents: read` in .github/workflows/ci.yml.');
+  }
+  if (!/\npermissions:\n(?:[ \t].*\n)*[ \t]+pull-requests:\s*write\b/m.test(ciContent)) {
+    warnings.push('Minimum caller contract missing `permissions.pull-requests: write` in .github/workflows/ci.yml.');
+  }
   const commitlintCallerPath = path.join(cwd, '.github', 'workflows', 'commitlint.yml');
   const commitlintConfigPath = path.join(cwd, 'commitlint.config.cjs');
-  if (fs.existsSync(commitlintCallerPath) && !fs.existsSync(commitlintConfigPath)) {
+  const hasCommitlintCallerRef =
+    fs.existsSync(commitlintCallerPath) &&
+    /^\s*uses:\s*.+\/\.github\/workflows\/commitlint\.yml@/m.test(fs.readFileSync(commitlintCallerPath, 'utf8'));
+  if (hasCommitlintCallerRef && !fs.existsSync(commitlintConfigPath)) {
     warnings.push('Missing commitlint.config.cjs while commitlint workflow is enabled.');
   }
 
+  const wfDir = path.join(cwd, '.github', 'workflows');
+  if (fs.existsSync(wfDir)) {
+    const workflowFiles = fs.readdirSync(wfDir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+    let hasV1Ref = false;
+    let hasQualityGatesRef = false;
+    for (const wf of workflowFiles) {
+      const content = fs.readFileSync(path.join(wfDir, wf), 'utf8');
+      if (/\buses:\s*[^@\s]+@main\b/.test(content)) {
+        warnings.push(`Detected \`@main\` reusable workflow ref in .github/workflows/${wf}. Use \`@v1\`.`);
+      }
+      if (/\buses:\s*[^@\s]+@v1\b/.test(content)) {
+        hasV1Ref = true;
+      }
+      if (content.includes('/.github/workflows/quality-gates.yml@')) {
+        hasQualityGatesRef = true;
+      }
+    }
+
+    if (!hasV1Ref) {
+      warnings.push('No reusable workflow reference pinned to `@v1` found in .github/workflows/*.yml.');
+    }
+
+    if (hasPolicy) {
+      const policyRequestsQualityGates = [
+        'dependency_review',
+        'codeql',
+        'sbom',
+        'slsa_provenance',
+        'ossf_scorecard'
+      ].some((key) => new RegExp(`^\\s*${key}:\\s*true\\s*$`, 'm').test(policy));
+
+      if (policyRequestsQualityGates && !hasQualityGatesRef) {
+        warnings.push('Policy enables quality gates, but no caller workflow references `quality-gates.yml` directly.');
+      }
+    }
+  }
+
   for (const w of warnings) console.log(`WARN: ${w}`);
-  console.log('OK: policy + workflow baseline checks passed.');
+  console.log('OK: workflow baseline checks completed.');
 }
 
 function commandMigrate(cwd) {

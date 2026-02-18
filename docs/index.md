@@ -14,4 +14,3 @@ Use this docs set to onboard quickly, choose presets, and roll out policy-as-cod
 - [Beta launch roadmap](./beta-launch-roadmap.md)
 - [Marketplace positioning](./marketplace.md)
 - [Proof pack](./proof-pack.md)
-- [Outbound setup PR template](./outreach-pr-template.md)
