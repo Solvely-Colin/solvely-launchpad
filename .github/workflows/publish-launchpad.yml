@@ -115,3 +115,45 @@ jobs:
           PACKAGE="solvely-launchpad"
           VERSION="${{ steps.version.outputs.version }}"
           npx -p ${PACKAGE}@$VERSION -c "echo '${PACKAGE}@${VERSION} installed successfully'"
+
+  sync-v1-tag:
+    name: Sync v1 workflow channel tag
+    needs: smoke-test
+    if: ${{ github.event_name == 'release' && github.event.action == 'published' && github.event.release.prerelease != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Move v1 tag to this release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "::error::No release tag found in event payload."
+            exit 1
+          fi
+
+          TARGET_SHA=$(git rev-list -n 1 "refs/tags/${RELEASE_TAG}")
+          if [ -z "$TARGET_SHA" ]; then
+            echo "::error::Could not resolve commit for release tag ${RELEASE_TAG}."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag -fa v1 "$TARGET_SHA" -m "Launchpad v1 channel -> ${RELEASE_TAG}"
+          git push origin refs/tags/v1 --force
+
+          {
+            echo "## v1 Channel Sync"
+            echo "- release: ${RELEASE_TAG}"
+            echo "- target: ${TARGET_SHA}"
+            echo "- moved tag: v1"
+          } >> "$GITHUB_STEP_SUMMARY"
