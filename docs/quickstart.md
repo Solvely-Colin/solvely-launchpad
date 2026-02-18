@@ -46,6 +46,8 @@ jobs:
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 ```
 
+When needed, set `with.install-command` to override install auto-detection (for example, nested workspaces or smoke callers).
+
 If you want security gates, call `quality-gates.yml` as a separate job in the same caller workflow.
 
 ## Auto deploy to npm on release

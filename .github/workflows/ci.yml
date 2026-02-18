@@ -34,6 +34,10 @@ on:
         description: 'Custom test command (auto-detected)'
         type: string
         default: ''
+      install-command:
+        description: 'Custom install command (auto-detected)'
+        type: string
+        default: ''
       lint-command:
         description: 'Custom lint command (auto-detected)'
         type: string
@@ -268,6 +272,7 @@ jobs:
           OUT_NODE=$(resolve_str "${{ inputs['node-versions'] }}" "$NODE_VERSIONS")
           OUT_BUILD_CMD=$(resolve_str "${{ inputs['build-command'] }}" "$BUILD_CMD")
           OUT_TEST_CMD=$(resolve_str "${{ inputs['test-command'] }}" "$TEST_CMD")
+          OUT_INSTALL_CMD=$(resolve_str "${{ inputs['install-command'] }}" "$INSTALL")
           OUT_LINT_CMD=$(resolve_str "${{ inputs['lint-command'] }}" "$LINT_CMD")
           OUT_FORMAT_CMD=$(resolve_str "${{ inputs['format-command'] }}" "$FORMAT_CMD")
           OUT_TC_CMD=$(resolve_str "${{ inputs['typecheck-command'] }}" "$TC_CMD")
@@ -295,7 +300,7 @@ jobs:
             echo "lint-command=${OUT_LINT_CMD}"
             echo "format-command=${OUT_FORMAT_CMD}"
             echo "typecheck-command=${OUT_TC_CMD}"
-            echo "install-command=${INSTALL}"
+            echo "install-command=${OUT_INSTALL_CMD}"
             echo "audit-command=${AUDIT_RUN}"
             echo "license-check=${OUT_LICENSE}"
             echo "security-audit=${OUT_AUDIT}"

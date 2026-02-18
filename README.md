@@ -116,6 +116,9 @@ jobs:
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 ```
 
+Optional override:
+- `install-command`: force a specific install step when auto-detection is not appropriate for your repo layout.
+
 Minimum caller contract:
 
 ```yaml
