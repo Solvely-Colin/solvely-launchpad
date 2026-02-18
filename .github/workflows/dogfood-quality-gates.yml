@@ -7,6 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+  security-events: write
+  id-token: write
+  attestations: write
+
 concurrency:
   group: dogfood-quality-gates-${{ github.ref }}
   cancel-in-progress: true
