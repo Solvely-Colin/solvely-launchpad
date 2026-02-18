@@ -49,9 +49,6 @@ jobs:
     if: ${{ inputs.npm-publish }}
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: ${{ inputs.package-directory }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -59,10 +56,6 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
-          cache-dependency-path: |
-            ${{ inputs.package-directory }}/package-lock.json
-            ${{ inputs.package-directory }}/pnpm-lock.yaml
-            ${{ inputs.package-directory }}/yarn.lock
           registry-url: https://registry.npmjs.org
 
       - name: Enable corepack
@@ -72,6 +65,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
+          cd "${{ inputs.package-directory }}"
           if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
             pnpm install --frozen-lockfile
           elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
@@ -87,6 +81,7 @@ jobs:
       - name: Build if script exists
         shell: bash
         run: |
+          cd "${{ inputs.package-directory }}"
           HAS_BUILD=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.build)")
           if [ "$HAS_BUILD" = "true" ]; then
             if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
@@ -100,7 +95,11 @@ jobs:
             echo "No build script found; skipping build step."
           fi
 
-      - run: npm publish --access public
+      - name: Publish package
+        shell: bash
+        run: |
+          cd "${{ inputs.package-directory }}"
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
 
@@ -135,7 +134,12 @@ jobs:
 
       - name: Wait for npm propagation and verify
         run: |
-          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          VERSION="${{ github.event.release.tag_name }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -e "console.log(require('./${{ inputs.package-directory }}/package.json').version)")
+          else
+            VERSION=$(echo "$VERSION" | sed 's/^v//')
+          fi
           PACKAGE="${{ inputs.package-name }}"
           for i in $(seq 1 18); do
             npm view ${PACKAGE}@$VERSION version && break || sleep 10
@@ -143,7 +147,12 @@ jobs:
 
       - name: Smoke test
         run: |
-          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          VERSION="${{ github.event.release.tag_name }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -e "console.log(require('./${{ inputs.package-directory }}/package.json').version)")
+          else
+            VERSION=$(echo "$VERSION" | sed 's/^v//')
+          fi
           PACKAGE="${{ inputs.package-name }}"
           CUSTOM_CMD="${{ inputs.smoke-test-command }}"
           if [ -n "$CUSTOM_CMD" ]; then
