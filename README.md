@@ -15,6 +15,12 @@ Launchpad gives you a stable `@v1` baseline with presets, policy-as-code, and hi
 npx solvely-launchpad init --preset node-lib --yes
 ```
 
+For app/service repos that do not publish packages:
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --app true
+```
+
 Then push your branch and open a PR.
 
 ## Why Launchpad
@@ -57,6 +63,12 @@ Strict mode during init:
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+```
+
+Skip release workflow for non-package repos:
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --no-release true
 ```
 
 Generated `commitlint.yml` can also be edited directly:
