@@ -1,6 +1,6 @@
 {
   "name": "solvely-launchpad",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "description": "Adoption-first CI template bootstrap CLI",
   "bin": {

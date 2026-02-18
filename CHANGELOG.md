@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.4
+
+- Fix npm publish workflow by removing strict setup-node cache path requirement in subdirectory package releases.
+
+
 ## 0.1.3
 
 - Replace release-triggered reusable caller with direct publish workflow to eliminate startup failures.
