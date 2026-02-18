@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.3
+
+- Replace release-triggered reusable caller with direct publish workflow to eliminate startup failures.
+- Keep release and manual dispatch paths with npm token preflight, build-if-present, publish, and smoke install checks.
+
+
 ## 0.1.2
 
 - Fix reusable release workflow startup and package-directory publishing reliability.
