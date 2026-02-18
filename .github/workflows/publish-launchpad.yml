@@ -3,6 +3,7 @@ name: Publish Launchpad
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,11 +13,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  preflight:
-    name: Preflight
+  publish:
+    name: Publish to npm
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Verify NPM token is configured
         run: |
           if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
@@ -24,14 +27,70 @@ jobs:
             exit 1
           fi
 
-  publish:
-    name: Publish to npm
-    needs: preflight
-    uses: ./.github/workflows/release.yml
-    with:
-      package-manager: npm
-      package-name: solvely-launchpad
-      package-directory: cli
-      npm-publish: true
-    secrets:
-      npm_token: ${{ secrets.NPM_TOKEN }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: |
+          cd cli
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Build if script exists
+        run: |
+          cd cli
+          HAS_BUILD=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.build)")
+          if [ "$HAS_BUILD" = "true" ]; then
+            npm run build
+          else
+            echo "No build script found; skipping build step."
+          fi
+
+      - name: Publish package
+        run: |
+          cd cli
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  smoke-test:
+    name: Post-publish smoke test
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          else
+            VERSION=$(node -e "console.log(require('./cli/package.json').version)")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for npm propagation and verify
+        run: |
+          PACKAGE="solvely-launchpad"
+          VERSION="${{ steps.version.outputs.version }}"
+          for i in $(seq 1 18); do
+            npm view ${PACKAGE}@$VERSION version && break || sleep 10
+          done
+
+      - name: Smoke test
+        run: |
+          PACKAGE="solvely-launchpad"
+          VERSION="${{ steps.version.outputs.version }}"
+          npx -p ${PACKAGE}@$VERSION -c "echo '${PACKAGE}@${VERSION} installed successfully'"
