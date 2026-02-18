@@ -1,0 +1,23 @@
+name: Dogfood Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: dogfood-quality-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: quality-gates
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
+    with:
+      dependency-review: true
+      sbom: true
+      codeql: false
+      slsa-provenance: false
+      ossf-scorecard: false

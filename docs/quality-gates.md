@@ -6,6 +6,22 @@ The reusable quality gate workflow is:
 
 All gates are opt-in and disabled by default.
 
+## Enable gates
+
+You can enable gates either from `ci.yml` inputs or from `.citemplate.yml`:
+
+```yaml
+checks:
+  security:
+    dependency_review: true
+    sbom: true
+    codeql: false
+    slsa_provenance: false
+    ossf_scorecard: false
+```
+
+`ci.yml` merges both sources and enables a gate when either source sets it to `true`.
+
 ## Inputs
 
 - `codeql`
@@ -20,17 +36,60 @@ When gates are enabled, caller repos may need:
 
 - `contents: read`
 - `pull-requests: write` (dependency review comments)
-- `security-events: write` (SARIF upload)
+- `security-events: write` (CodeQL/Scorecard SARIF upload)
 - `id-token: write` and `attestations: write` (SLSA provenance)
 
-## Secrets and tokens
+## Gate reference
 
-No extra secret is required by default for these gates, but private dependency sources or enterprise policies may require additional auth in caller repos.
+### CodeQL
 
-## Failure modes and remediation
+Purpose: static code security analysis.
 
-1. `dependency-review` skipped on push events: expected behavior; this gate runs on PR context.
-2. CodeQL fails to autobuild: add explicit build steps in caller workflow before invoking gate.
-3. SARIF upload permission errors: ensure `security-events: write` is granted.
-4. SLSA provenance errors: ensure `id-token: write` and `attestations: write` are granted.
-5. Scorecard rate-limit or permission issues: retry and verify repository visibility/permissions.
+Common failure: autobuild fails.
+
+Remediation: add explicit build steps before/around CodeQL in the caller workflow.
+
+### Dependency Review
+
+Purpose: detect risky dependency changes on PRs.
+
+Execution rule: runs only in `pull_request` context. On push/release/dispatch it is skipped with reason.
+
+Common failure: denied package/license policy.
+
+Remediation: inspect PR dependency diff and adjust dependency policy/allowlist.
+
+### SBOM
+
+Purpose: generate SPDX JSON SBOM artifact.
+
+Common failure: repository content resolution/generation error.
+
+Remediation: ensure workflow can read repository contents and rerun.
+
+### SLSA Provenance
+
+Purpose: generate build provenance attestation.
+
+Common failure: missing `id-token` or `attestations` permission.
+
+Remediation: grant required permissions in caller workflow.
+
+### OSSF Scorecard
+
+Purpose: repository supply-chain posture scan.
+
+Common failure: SARIF upload or permission error.
+
+Remediation: ensure `security-events: write` and repository accessibility.
+
+## Summary outputs
+
+Each run writes a job summary table with:
+
+- gate enabled state
+- whether it executed
+- status (`success|failure|skipped`)
+- skip/failure reason
+
+This makes non-PR skips and policy-driven behavior explicit.

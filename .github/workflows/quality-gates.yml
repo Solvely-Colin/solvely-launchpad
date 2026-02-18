@@ -27,19 +27,42 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
-  actions: read
-  id-token: write
-  attestations: write
 
 concurrency:
   group: quality-gates-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  preflight:
+    name: Quality gate preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      can-run-dependency-review: ${{ steps.preflight.outputs.can-run-dependency-review }}
+      event-name: ${{ steps.preflight.outputs.event-name }}
+    steps:
+      - name: Evaluate runtime context
+        id: preflight
+        shell: bash
+        run: |
+          EVENT_NAME="${{ github.event_name }}"
+          CAN_RUN_DEP_REVIEW="false"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            CAN_RUN_DEP_REVIEW="true"
+          fi
+
+          echo "event-name=$EVENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "can-run-dependency-review=$CAN_RUN_DEP_REVIEW" >> "$GITHUB_OUTPUT"
+
+          echo "## Quality Gates Preflight" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Event | $EVENT_NAME |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency review runnable | $CAN_RUN_DEP_REVIEW |" >> "$GITHUB_STEP_SUMMARY"
+
   codeql:
     if: ${{ inputs.codeql }}
+    needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -60,8 +83,13 @@ jobs:
       - name: Analyze
         uses: github/codeql-action/analyze@f5c2471be782132e47a6e6f9c725e56730d6e9a3 # v3
 
+      - name: Remediation hint
+        if: failure()
+        run: echo "::error::CodeQL failed. If autobuild is insufficient, add explicit build steps before the gate."
+
   dependency-review:
-    if: ${{ inputs.dependency-review && github.event_name == 'pull_request' }}
+    if: ${{ inputs.dependency-review && needs.preflight.outputs.can-run-dependency-review == 'true' }}
+    needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -69,11 +97,17 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Dependency Review
         uses: actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261 # v4
 
+      - name: Remediation hint
+        if: failure()
+        run: echo "::error::Dependency review failed. Inspect PR dependency changes and update policy/allowlist as needed."
+
   sbom:
     if: ${{ inputs.sbom }}
+    needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -94,15 +128,20 @@ jobs:
           name: sbom
           path: sbom.spdx.json
 
+      - name: Remediation hint
+        if: failure()
+        run: echo "::error::SBOM generation failed. Ensure repository contents are readable and retry."
+
   slsa-provenance:
     if: ${{ inputs.slsa-provenance }}
+    needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       actions: read
-      id-token: write
       attestations: write
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -114,15 +153,20 @@ jobs:
         with:
           subject-path: source.tgz
 
+      - name: Remediation hint
+        if: failure()
+        run: echo "::error::SLSA provenance failed. Ensure id-token and attestations permissions are granted."
+
   ossf-scorecard:
     if: ${{ inputs.ossf-scorecard }}
+    needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      security-events: write
-      id-token: write
-      contents: read
       actions: read
+      contents: read
+      id-token: write
+      security-events: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -143,3 +187,70 @@ jobs:
         with:
           name: scorecard-results
           path: scorecard-results.sarif
+
+      - name: Remediation hint
+        if: failure()
+        run: echo "::error::OSSF Scorecard failed. Verify security-events write permission and repository accessibility."
+
+  summary:
+    name: Quality gates summary
+    if: ${{ always() }}
+    needs: [preflight, codeql, dependency-review, sbom, slsa-provenance, ossf-scorecard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish summary
+        shell: bash
+        env:
+          INPUT_CODEQL: ${{ inputs.codeql }}
+          INPUT_DEP_REVIEW: ${{ inputs.dependency-review }}
+          INPUT_SBOM: ${{ inputs.sbom }}
+          INPUT_SLSA: ${{ inputs.slsa-provenance }}
+          INPUT_SCORECARD: ${{ inputs.ossf-scorecard }}
+          EVENT_NAME: ${{ needs.preflight.outputs.event-name }}
+          CAN_DEP_REVIEW: ${{ needs.preflight.outputs.can-run-dependency-review }}
+          RES_CODEQL: ${{ needs.codeql.result }}
+          RES_DEP_REVIEW: ${{ needs.dependency-review.result }}
+          RES_SBOM: ${{ needs.sbom.result }}
+          RES_SLSA: ${{ needs.slsa-provenance.result }}
+          RES_SCORECARD: ${{ needs.ossf-scorecard.result }}
+        run: |
+          gate_line() {
+            local name="$1"
+            local enabled="$2"
+            local result="$3"
+            local reason="$4"
+            local executed="no"
+            local status="skipped"
+
+            if [ "$enabled" = "true" ]; then
+              if [ "$result" = "success" ]; then
+                executed="yes"
+                status="success"
+              elif [ "$result" = "failure" ] || [ "$result" = "cancelled" ] || [ "$result" = "timed_out" ]; then
+                executed="yes"
+                status="$result"
+              else
+                status="skipped"
+              fi
+            else
+              reason="disabled"
+            fi
+
+            echo "| $name | $enabled | $executed | $status | $reason |" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          echo "## Quality Gates" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Gate | Enabled | Executed | Status | Reason |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          DEP_REASON=""
+          if [ "$INPUT_DEP_REVIEW" = "true" ] && [ "$CAN_DEP_REVIEW" != "true" ]; then
+            DEP_REASON="requires pull_request event (current: $EVENT_NAME)"
+          fi
+
+          gate_line "CodeQL" "$INPUT_CODEQL" "$RES_CODEQL" ""
+          gate_line "Dependency review" "$INPUT_DEP_REVIEW" "$RES_DEP_REVIEW" "$DEP_REASON"
+          gate_line "SBOM" "$INPUT_SBOM" "$RES_SBOM" ""
+          gate_line "SLSA provenance" "$INPUT_SLSA" "$RES_SLSA" ""
+          gate_line "OSSF Scorecard" "$INPUT_SCORECARD" "$RES_SCORECARD" ""
