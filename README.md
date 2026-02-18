@@ -1,15 +1,13 @@
 # Solvely Launchpad
 
-[![Self Test Matrix](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/self-test-matrix.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/self-test-matrix.yml)
 [![Repository CI](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml)
-[![Publish Launchpad](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/publish-launchpad.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/publish-launchpad.yml)
 [![npm version](https://img.shields.io/npm/v/solvely-launchpad)](https://www.npmjs.com/package/solvely-launchpad)
-[![npm downloads](https://img.shields.io/npm/dm/solvely-launchpad)](https://www.npmjs.com/package/solvely-launchpad)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
-**Adoption-first CI/CD platform for OSS maintainers.**
+**CI/CD toolkit for OSS maintainers.**
 
-Set up reliable CI in minutes with preset-based workflows, policy-as-code, PR feedback that developers actually read, and release-grade stability (`@v1`).
+Most OSS repos lose time to copy-pasted CI files, inconsistent checks, and noisy PR signal.
+Launchpad gives you a clean baseline fast: reusable workflows, stack presets, policy-as-code, and high-signal PR summaries.
 
 ## 30-Second Install
 
@@ -19,19 +17,18 @@ npx solvely-launchpad init --preset node-lib --yes
 
 Then push your branch and open a PR.
 
-## Why Teams Star It
+## Why Launchpad
 
-- `@v1` stability contract with migration + deprecation policy
+- Stable reusable workflow contract at `@v1`
 - One-command onboarding (`init`, `preview`, `doctor`, `migrate`)
-- 8 launch presets that work out-of-the-box
-- Policy-as-code with non-breaking v1.x compatibility behavior
-- Aggregated PR summaries + job summaries for fast debugging
-- Self-test fixture matrix to keep templates trustworthy
-- Opt-in security gates (CodeQL, SBOM, dependency review, SLSA, OSSF Scorecard)
+- 8 launch presets (Node, Next.js, Turbo, Bun, pnpm monorepo, Python, Go, Rust)
+- Policy-as-code via `.citemplate.yml`
+- Aggregated PR summaries to cut debug time
+- Opt-in security gates (CodeQL, dependency review, SBOM, SLSA, OSSF Scorecard)
 
-## Quick Start Paths
+## Quick Start
 
-### Path A: CLI (recommended)
+### CLI (recommended)
 
 ```bash
 npx solvely-launchpad init --preset nextjs --yes
@@ -44,9 +41,9 @@ Preview before writing files:
 npx solvely-launchpad preview --preset turbo
 ```
 
-### Path B: GitHub-only setup
+### GitHub-only setup
 
-Use [`.github/workflows/setup.yml`](.github/workflows/setup.yml) (`workflow_dispatch`) to generate setup changes and open a PR without local CLI setup.
+Use [`.github/workflows/setup.yml`](.github/workflows/setup.yml) (`workflow_dispatch`) to open a setup PR without local CLI installation.
 
 ## Presets
 
@@ -61,7 +58,7 @@ Use [`.github/workflows/setup.yml`](.github/workflows/setup.yml) (`workflow_disp
 | `go` | Go modules/services |
 | `rust` | Rust crates/services |
 
-Preset definitions live in [`presets/v1/`](presets/v1/).
+Preset definitions: [`presets/v1/`](presets/v1/)
 
 ## Reusable Workflows (`@v1`)
 
@@ -82,20 +79,16 @@ Available reusable workflows:
 
 ## Policy-as-Code
 
-Create `.citemplate.yml` in consumer repos:
-
 ```yaml
 version: 1
 preset: node-lib
 checks:
   required: [ci, test]
-  license:
-    deny: [GPL-2.0, GPL-3.0]
   security:
     audit_level: critical
-    dependency_review: false
+    dependency_review: true
+    sbom: true
     codeql: false
-    sbom: false
     slsa_provenance: false
     ossf_scorecard: false
 pr_feedback:
@@ -108,46 +101,31 @@ branches:
 
 Schema: [`schema/citemplate.schema.json`](schema/citemplate.schema.json)
 
-v1.x compatibility rules:
-
-- Unknown keys warn (do not fail)
-- Breaking schema changes are reserved for `v2`
-
 ## PR Feedback UX
 
-`ci.yml` can post a single aggregated PR comment (updated in-place) with:
+Launchpad updates one comment per PR (no spam), with CI outcomes in one table.
 
-- CI check table (lint/format/type/build/test)
-- policy and license notes
-- security/bundle/coverage signals
-- flaky-test hints
+Example:
 
-## Security + Quality Gates (Opt-in)
+```md
+## Solvely Launchpad Summary
+| Check | Result |
+|---|---|
+| Policy | success |
+| Lint | success |
+| Tests | failure |
+| Quality gates | success |
+```
 
-Enable independently via policy config:
+## Security Gates (Opt-in)
+
+Enable independently:
 
 - CodeQL
 - Dependency review
 - SBOM
 - SLSA provenance
 - OSSF Scorecard
-
-Example:
-
-```yaml
-checks:
-  security:
-    dependency_review: true
-    sbom: true
-    codeql: false
-    slsa_provenance: false
-    ossf_scorecard: false
-```
-
-Notes:
-
-- Dependency review runs only for `pull_request` events and is skipped (not failed) on other triggers.
-- `ci.yml` merges policy toggles with explicit gate inputs and enables a gate when either source is `true`.
 
 Details: [`docs/quality-gates.md`](docs/quality-gates.md)
 
@@ -156,35 +134,28 @@ Details: [`docs/quality-gates.md`](docs/quality-gates.md)
 Release publishing is automatic via [`.github/workflows/publish-launchpad.yml`](.github/workflows/publish-launchpad.yml).
 
 1. Add repo secret `NPM_TOKEN`
-2. Merge release PR that bumps `cli/package.json`
-3. Create GitHub Release (example: `v0.1.5`)
-4. Workflow publishes `solvely-launchpad` and runs smoke test
+2. Merge release PR bumping `cli/package.json`
+3. Create GitHub Release tag (example: `v0.1.5`)
+4. Publish + smoke test run automatically
 
 ## Stability Contract
 
 - Use `@v1` in production
-- `v1.x` is semver stable (no breaking contract changes)
-- Deprecations are announced with overlap before removal
-- Migrations are documented
+- `v1.x` is semver-stable
+- Breaking changes are reserved for `v2`
+- Deprecations are announced before removal
 
 References:
 
 - [`docs/migrations/v1.md`](docs/migrations/v1.md)
 - [`docs/policy/deprecations.md`](docs/policy/deprecations.md)
 
-## Reliability + Governance
-
-- Governance checklist: [`docs/governance.md`](docs/governance.md)
-- Reliability tracking: [`docs/reliability.md`](docs/reliability.md)
-- Adoption tracking: [`docs/adoption.md`](docs/adoption.md)
-- Fixture CI: [`.github/workflows/self-test-matrix.yml`](.github/workflows/self-test-matrix.yml)
-
 ## Docs
 
-- [`docs/index.md`](docs/index.md)
-- [`docs/quickstart.md`](docs/quickstart.md)
-- [`docs/troubleshooting.md`](docs/troubleshooting.md)
-- [`docs/presets/`](docs/presets/)
+- [Docs index](docs/index.md)
+- [Quickstart](docs/quickstart.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [All docs](docs/)
 
 ## Contributing
 
