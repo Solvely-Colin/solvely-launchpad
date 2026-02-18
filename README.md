@@ -157,8 +157,11 @@ Release publishing is automatic via [`.github/workflows/publish-launchpad.yml`](
 
 1. Add repo secret `NPM_TOKEN`
 2. Merge release PR bumping `cli/package.json`
-3. Create GitHub Release tag (example: `v0.1.5`)
+3. Create a GitHub Release tag (example: `v0.1.6`)
 4. Publish + smoke test run automatically
+5. On stable releases, Launchpad also re-points workflow channel tag `v1` to that release commit automatically
+
+If your org blocks force-updating tags, the `sync-v1-tag` job will fail with a clear error. In that case, allow GitHub Actions to update tags or run a one-time admin tag update flow.
 
 ## Stability Contract
 
