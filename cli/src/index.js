@@ -30,6 +30,12 @@ function parseArgs(argv) {
   return out;
 }
 
+function isTrueFlag(value) {
+  if (value === true) return true;
+  if (value === false || value === undefined) return false;
+  return String(value).toLowerCase() === 'true';
+}
+
 function loadPresets() {
   const files = fs.readdirSync(PRESET_DIR).filter((f) => f.endsWith('.json'));
   const presets = files.map((f) => JSON.parse(fs.readFileSync(path.join(PRESET_DIR, f), 'utf8')));
@@ -87,7 +93,7 @@ function renderPolicy(preset) {
   return `version: 1\npreset: ${preset}\nchecks:\n  required: [ci, test]\n  license:\n    deny: [GPL-2.0, GPL-3.0]\n  security:\n    audit_level: critical\n    dependency_review: false\n    codeql: false\n    sbom: false\n    slsa_provenance: false\n    ossf_scorecard: false\npr_feedback:\n  enabled: true\n  mode: aggregated\n  flaky_hints: true\nbranches:\n  protected: [main]\n`;
 }
 
-function planFiles(cwd, preset, pm, writePolicy, commitlintStrict) {
+function planFiles(cwd, preset, pm, writePolicy, commitlintStrict, includeRelease) {
   const files = [];
   const wfDir = path.join(cwd, '.github', 'workflows');
   const ciOverrides = preset.defaultOverrides || {};
@@ -114,7 +120,7 @@ function planFiles(cwd, preset, pm, writePolicy, commitlintStrict) {
     });
   }
 
-  if (preset.requiredWorkflows.includes('release')) {
+  if (preset.requiredWorkflows.includes('release') && includeRelease) {
     files.push({ path: path.join(wfDir, 'release.yml'), content: renderReleaseWorkflow() });
   }
 
@@ -253,8 +259,20 @@ export async function run(argv) {
   if (!preset) throw new Error(`Unknown preset: ${selectedPreset}`);
 
   const pm = args['package-manager'] || detectPackageManager(cwd);
-  const commitlintStrict = String(args['commitlint-strict'] || 'false').toLowerCase() === 'true';
-  const files = planFiles(cwd, preset, pm, args.policy !== 'false', commitlintStrict);
+  const commitlintStrict = isTrueFlag(args['commitlint-strict']);
+  const releaseRequestedByPreset = preset.requiredWorkflows.includes('release');
+  const releaseDisabledByFlag = isTrueFlag(args['no-release']) || isTrueFlag(args.app);
+  const hasPackageJson = fs.existsSync(path.join(cwd, 'package.json'));
+  const includeRelease = releaseRequestedByPreset && !releaseDisabledByFlag && hasPackageJson;
+  const files = planFiles(cwd, preset, pm, args.policy !== 'false', commitlintStrict, includeRelease);
+
+  if (releaseRequestedByPreset && !includeRelease) {
+    if (releaseDisabledByFlag) {
+      console.log('Note: skipping release workflow (--no-release/--app enabled).');
+    } else if (!hasPackageJson) {
+      console.log('Note: skipping release workflow (no package.json detected).');
+    }
+  }
 
   if (cmd === 'preview') {
     printPlan(files);

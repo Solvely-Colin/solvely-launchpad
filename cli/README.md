@@ -14,12 +14,16 @@ Bootstrap and manage Solvely Launchpad workflows.
 - `--commitlint-strict true|false` (default `false`)
   - `false`: commitlint warns but does not block CI
   - `true`: commitlint failures block CI
+- `--no-release true|false` (default `false`)
+  - `true`: never generate `.github/workflows/release.yml`
+- `--app true|false` (alias of `--no-release`)
 
 ## Examples
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes
 npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+npx solvely-launchpad init --preset node-lib --yes --app true
 npx solvely-launchpad preview --preset nextjs
 npx solvely-launchpad doctor
 npx solvely-launchpad migrate --from v1 --to v1.x

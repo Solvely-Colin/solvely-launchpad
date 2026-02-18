@@ -6,6 +6,12 @@
 npx solvely-launchpad init --preset node-lib --yes
 ```
 
+For non-package repos, skip release workflow generation:
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --app true
+```
+
 Strict commitlint mode (optional):
 
 ```bash
