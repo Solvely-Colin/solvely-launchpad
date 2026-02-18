@@ -24,7 +24,7 @@ jobs:
     name: quality-gates
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@main
     with:
-      dependency-review: false
+      dependency-review: true
       sbom: true
       codeql: false
       slsa-provenance: false
