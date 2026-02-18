@@ -15,6 +15,17 @@
 - CLI falls back to `node-lib`.
 - Specify explicitly: `--preset <preset-id>`.
 
+## Commitlint is failing in strict mode
+
+- Use Conventional Commits (`feat:`, `fix:`, `chore:`).
+- If you are onboarding an existing repo, set `strict: false` first.
+- Later switch to strict mode after the team normalizes commit messages.
+
+## Commitlint warns but CI stays green
+
+- This is expected default behavior (`strict: false`).
+- Enable blocking mode via `--commitlint-strict true` during init or set `strict: true` in `.github/workflows/commitlint.yml`.
+
 ## Dependency review did not run
 
 - Expected on non-PR events (`push`, `release`, `workflow_dispatch`).

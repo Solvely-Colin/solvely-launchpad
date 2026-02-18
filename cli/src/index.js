@@ -68,11 +68,26 @@ function renderReleaseWorkflow() {
   return `name: Release\non:\n  release:\n    types: [published]\njobs:\n  release:\n    uses: ${REPO_REF}/.github/workflows/release.yml@${VERSION_REF}\n    with:\n      package-name: your-package-name\n    secrets:\n      npm-token: \${{ secrets.NPM_TOKEN }}\n`;
 }
 
+function renderCommitlintConfig() {
+  return `module.exports = {
+  rules: {
+    'type-empty': [2, 'never'],
+    'subject-empty': [2, 'never'],
+    'header-max-length': [2, 'always', 100]
+  }
+};
+`;
+}
+
+function renderCommitlintCallerWorkflow(strict) {
+  return `name: Commitlint\non:\n  pull_request:\n    branches: [main]\njobs:\n  commitlint:\n    uses: ${REPO_REF}/.github/workflows/commitlint.yml@${VERSION_REF}\n    with:\n      strict: ${strict ? 'true' : 'false'}\n`;
+}
+
 function renderPolicy(preset) {
   return `version: 1\npreset: ${preset}\nchecks:\n  required: [ci, test]\n  license:\n    deny: [GPL-2.0, GPL-3.0]\n  security:\n    audit_level: critical\n    dependency_review: false\n    codeql: false\n    sbom: false\n    slsa_provenance: false\n    ossf_scorecard: false\npr_feedback:\n  enabled: true\n  mode: aggregated\n  flaky_hints: true\nbranches:\n  protected: [main]\n`;
 }
 
-function planFiles(cwd, preset, pm, writePolicy) {
+function planFiles(cwd, preset, pm, writePolicy, commitlintStrict) {
   const files = [];
   const wfDir = path.join(cwd, '.github', 'workflows');
   const ciOverrides = preset.defaultOverrides || {};
@@ -84,7 +99,11 @@ function planFiles(cwd, preset, pm, writePolicy) {
   if (preset.requiredWorkflows.includes('commitlint')) {
     files.push({
       path: path.join(wfDir, 'commitlint.yml'),
-      content: `name: Commitlint\non:\n  pull_request:\n    branches: [main]\njobs:\n  commitlint:\n    uses: ${REPO_REF}/.github/workflows/commitlint.yml@${VERSION_REF}\n`
+      content: renderCommitlintCallerWorkflow(commitlintStrict)
+    });
+    files.push({
+      path: path.join(cwd, 'commitlint.config.cjs'),
+      content: renderCommitlintConfig()
     });
   }
 
@@ -187,6 +206,12 @@ function commandDoctor(cwd) {
   const ciPath = path.join(cwd, '.github', 'workflows', 'ci.yml');
   if (!fs.existsSync(ciPath)) throw new Error('Missing .github/workflows/ci.yml');
 
+  const commitlintCallerPath = path.join(cwd, '.github', 'workflows', 'commitlint.yml');
+  const commitlintConfigPath = path.join(cwd, 'commitlint.config.cjs');
+  if (fs.existsSync(commitlintCallerPath) && !fs.existsSync(commitlintConfigPath)) {
+    warnings.push('Missing commitlint.config.cjs while commitlint workflow is enabled.');
+  }
+
   for (const w of warnings) console.log(`WARN: ${w}`);
   console.log('OK: policy + workflow baseline checks passed.');
 }
@@ -228,7 +253,8 @@ export async function run(argv) {
   if (!preset) throw new Error(`Unknown preset: ${selectedPreset}`);
 
   const pm = args['package-manager'] || detectPackageManager(cwd);
-  const files = planFiles(cwd, preset, pm, args.policy !== 'false');
+  const commitlintStrict = String(args['commitlint-strict'] || 'false').toLowerCase() === 'true';
+  const files = planFiles(cwd, preset, pm, args.policy !== 'false', commitlintStrict);
 
   if (cmd === 'preview') {
     printPlan(files);
@@ -248,7 +274,8 @@ export async function run(argv) {
   }
 
   if (args.commit) {
-    runGit('git', ['add', '.github/workflows', '.citemplate.yml', 'README.md'], cwd);
+    const addTargets = [...new Set(files.map((f) => path.relative(cwd, f.path)))];
+    runGit('git', ['add', ...addTargets], cwd);
     runGit('git', ['commit', '-m', typeof args.commit === 'string' ? args.commit : 'chore(ci): bootstrap launchpad'], cwd);
   }
 

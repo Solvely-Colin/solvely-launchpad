@@ -6,8 +6,8 @@
 
 **CI/CD toolkit for OSS maintainers.**
 
-Most OSS repos lose time to copy-pasted CI files, inconsistent checks, and noisy PR signal.
-Launchpad gives you a clean baseline fast: reusable workflows, stack presets, policy-as-code, and high-signal PR summaries.
+Most OSS repos waste time on copy-pasted workflows and noisy CI output.
+Launchpad gives you a stable `@v1` baseline with presets, policy-as-code, and high-signal PR summaries.
 
 ## 30-Second Install
 
@@ -44,6 +44,30 @@ npx solvely-launchpad preview --preset turbo
 ### GitHub-only setup
 
 Use [`.github/workflows/setup.yml`](.github/workflows/setup.yml) (`workflow_dispatch`) to open a setup PR without local CLI installation.
+
+## Commit Quality (Base + Strict)
+
+Launchpad now ships a base commitlint setup for commitlint-enabled presets:
+
+- Generates `commitlint.config.cjs`
+- Uses non-blocking mode by default (`strict: false`)
+- Supports strict mode when teams are ready
+
+Strict mode during init:
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+```
+
+Generated `commitlint.yml` can also be edited directly:
+
+```yaml
+jobs:
+  commitlint:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/commitlint.yml@v1
+    with:
+      strict: false
+```
 
 ## Presets
 
@@ -104,8 +128,6 @@ Schema: [`schema/citemplate.schema.json`](schema/citemplate.schema.json)
 ## PR Feedback UX
 
 Launchpad updates one comment per PR (no spam), with CI outcomes in one table.
-
-Example:
 
 ```md
 ## Solvely Launchpad Summary
