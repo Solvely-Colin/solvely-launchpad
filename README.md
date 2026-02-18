@@ -19,7 +19,7 @@ npx solvely-launchpad init --preset node-lib --yes
 
 Then push your branch and open a PR.
 
-## Why Teams Star It
+## Why Make It
 
 - `@v1` stability contract with migration + deprecation policy
 - One-command onboarding (`init`, `preview`, `doctor`, `migrate`)
