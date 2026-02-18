@@ -1,5 +1,5 @@
 # Reusable coverage workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@v1
+# Usage: uses: Solvely-Colin/solvely-launchpad/.github/workflows/coverage.yml@v1
 
 name: Tests & Coverage
 

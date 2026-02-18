@@ -1,0 +1,10 @@
+{
+  "name": "fixture-pnpm-monorepo",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test",
+    "lint": "echo lint"
+  }
+}

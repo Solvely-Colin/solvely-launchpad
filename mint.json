@@ -1,0 +1,34 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Solvely Launchpad",
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "docs/index",
+        "docs/quickstart",
+        "docs/troubleshooting"
+      ]
+    },
+    {
+      "group": "Presets",
+      "pages": [
+        "docs/presets/node-lib",
+        "docs/presets/nextjs",
+        "docs/presets/turbo",
+        "docs/presets/bun",
+        "docs/presets/pnpm-monorepo",
+        "docs/presets/python",
+        "docs/presets/go",
+        "docs/presets/rust"
+      ]
+    },
+    {
+      "group": "Policy",
+      "pages": [
+        "docs/migrations/v1",
+        "docs/policy/deprecations"
+      ]
+    }
+  ]
+}

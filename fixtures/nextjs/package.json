@@ -1,0 +1,9 @@
+{
+  "name": "fixture-nextjs",
+  "private": true,
+  "scripts": {
+    "build": "echo next build",
+    "test": "echo test",
+    "lint": "echo lint"
+  }
+}

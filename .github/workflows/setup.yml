@@ -1,0 +1,81 @@
+name: Setup Solvely Launchpad
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: 'Preset to apply'
+        required: true
+        default: node-lib
+        type: choice
+        options:
+          - node-lib
+          - nextjs
+          - turbo
+          - bun
+          - pnpm-monorepo
+          - python
+          - go
+          - rust
+      package-manager:
+        description: 'Package manager override'
+        required: true
+        default: npm
+        type: choice
+        options:
+          - npm
+          - pnpm
+          - yarn
+      create-policy:
+        description: 'Create .citemplate.yml'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Bootstrap Launchpad files
+        run: |
+          if [ -f "./cli/bin/launchpad.js" ]; then
+            node ./cli/bin/launchpad.js init \
+              --preset "${{ inputs.preset }}" \
+              --package-manager "${{ inputs.package-manager }}" \
+              --policy "${{ inputs.create-policy }}" \
+              --yes
+          else
+            npx -y @solvely/launchpad init \
+              --preset "${{ inputs.preset }}" \
+              --package-manager "${{ inputs.package-manager }}" \
+              --policy "${{ inputs.create-policy }}" \
+              --yes
+          fi
+
+      - name: Commit setup branch
+        env:
+          BRANCH: chore/setup-launchpad-${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add .
+          git commit -m "chore(ci): setup launchpad preset ${{ inputs.preset }}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore(ci): bootstrap launchpad (${{ inputs.preset }})" \
+            --body "Automated setup using Solvely Launchpad setup workflow." \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH"

@@ -1,171 +1,170 @@
-# ci-template
+# solvely-launchpad
 
-Zero-config reusable GitHub Actions workflows. Auto-detects your project, runs the right checks.
+Adoption-first reusable GitHub Actions + onboarding CLI for fast CI/CD rollout.
 
-## Quick Start
+## What This Ships
 
-Create `.github/workflows/ci.yml` in your repo:
+- Reusable workflows pinned at `@v1`
+- Standalone bootstrap CLI: `@solvely/launchpad`
+- Dual-channel setup: CLI + GitHub-only setup workflow
+- Preset system for 8 stacks
+- Policy-as-code via `.citemplate.yml`
+- Optional quality gates (opt-in)
+- Fixture matrix self-tests for reliability
 
-```yaml
-name: CI
-on: [push, pull_request]
+## Stability Contract (v1)
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+- Use `@v1` for all workflow references.
+- `v1.x` is semver-stable and non-breaking.
+- Breaking changes are reserved for `v2`.
+- Deprecations are announced with at least two minor versions of overlap.
 
-jobs:
-  ci:
-    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
+Migration details: `docs/migrations/v1.md`
+Deprecation policy: `docs/policy/deprecations.md`
+
+## 30-Second Onboarding
+
+## 1) CLI
+
+```bash
+npx @solvely/launchpad init --preset node-lib --yes
 ```
 
-That's it. It detects TypeScript, ESLint, Prettier, build scripts, monorepo setup, package manager — and runs only what applies.
+Useful commands:
 
-## Versioning
+```bash
+npx @solvely/launchpad preview --preset nextjs
+npx @solvely/launchpad doctor
+npx @solvely/launchpad migrate --from v1 --to v1.x
+```
 
-Use `@v1` for stability. The `v1` tag tracks the latest compatible release. Avoid `@main` in production — it may contain breaking changes.
+## 2) GitHub-only setup
 
-## How Auto-Detection Works
+Use `.github/workflows/setup.yml` with `workflow_dispatch` to generate a setup PR.
 
-The `detect` job does a full checkout and inspects your repo before anything runs:
+## Presets
 
-| Detection | How |
-|-----------|-----|
-| **TypeScript** | `tsconfig.json` exists |
-| **ESLint** | `.eslintrc*` / `eslint.config.*` / `package.json:eslintConfig` |
-| **Prettier** | `.prettierrc*` / `prettier.config.*` / `package.json:prettier` |
-| **Build** | `package.json` has `build` script |
-| **Tests** | `package.json` has `test` script (not the default placeholder) |
-| **Bundle size** | `.size-limit.json` exists |
-| **Monorepo** | `turbo.json` / `pnpm-workspace.yaml` / `lerna.json` / `nx.json` / `package.json:workspaces` |
-| **Package manager** | `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, else npm |
-| **Node versions** | `.nvmrc` / `.node-version`, or default `["20","22"]` |
-| **Python/Go/Rust** | `pyproject.toml` / `go.mod` / `Cargo.toml` (future use) |
+Launch presets:
 
-Monorepos with `turbo.json` automatically use `turbo build`, `turbo test`, etc.
+- `node-lib`
+- `nextjs`
+- `turbo`
+- `bun`
+- `pnpm-monorepo`
+- `python`
+- `go`
+- `rust`
 
-### Package Manager Support
+Preset docs are in `docs/presets/`.
 
-All workflows respect the detected package manager (npm, pnpm, yarn). Install commands, audit commands, and build commands adapt automatically. For pnpm/yarn projects, corepack is enabled automatically.
+## Policy-as-Code
 
-### Overriding Detection
+Add `.citemplate.yml` to consumer repos:
 
-Any explicit input **overrides** auto-detection. Mix and match:
+```yaml
+version: 1
+preset: node-lib
+checks:
+  required: [ci, test]
+  license:
+    deny: [GPL-2.0, GPL-3.0]
+  security:
+    audit_level: critical
+    dependency_review: false
+    codeql: false
+    sbom: false
+    slsa_provenance: false
+    ossf_scorecard: false
+pr_feedback:
+  enabled: true
+  mode: aggregated
+  flaky_hints: true
+branches:
+  protected: [main]
+```
+
+Schema: `schema/citemplate.schema.json`
+
+v1 behavior:
+
+- Unknown top-level keys warn, not fail.
+- Invalid required values fail with actionable errors.
+
+## Reusable Workflows
+
+## `ci.yml`
 
 ```yaml
 jobs:
   ci:
-    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
+```
+
+## `coverage.yml`
+
+```yaml
+jobs:
+  coverage:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/coverage.yml@v1
+```
+
+## `release.yml`
+
+```yaml
+jobs:
+  release:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/release.yml@v1
+```
+
+## `scheduled.yml`
+
+```yaml
+jobs:
+  maintenance:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/scheduled.yml@v1
+```
+
+## `commitlint.yml`
+
+```yaml
+jobs:
+  commitlint:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/commitlint.yml@v1
+```
+
+## `quality-gates.yml` (opt-in)
+
+```yaml
+jobs:
+  quality:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
     with:
-      has-prettier: false        # skip even if .prettierrc exists
-      test-command: 'node --test' # override detected test command
-      # everything else: auto-detected
+      codeql: true
+      dependency-review: true
 ```
 
-## Available Workflows
+## PR Feedback UX
 
-### `ci.yml` — PR Checks (Zero-Config)
+`ci.yml` now publishes one aggregated PR comment (updated in place) with:
 
-All inputs are optional. Empty string = auto-detect.
+- check status table
+- audit/license/bundle visibility
+- flaky-test hints
 
-| Input | Type | Auto-Detected From | Description |
-|-------|------|--------------------|-------------|
-| `node-versions` | string | `.nvmrc` / `["20","22"]` | JSON array of Node versions |
-| `has-typescript` | string | `tsconfig.json` | Run typecheck |
-| `has-eslint` | string | eslint config files | Run lint |
-| `has-prettier` | string | prettier config files | Run format:check |
-| `has-build` | string | `package.json` scripts | Run build step |
-| `build-command` | string | turbo/npm/pnpm/yarn | Build command |
-| `test-command` | string | turbo/npm/pnpm/yarn | Test command |
-| `lint-command` | string | turbo/npm/pnpm/yarn | Lint command |
-| `format-command` | string | turbo/npm/pnpm/yarn | Format command |
-| `typecheck-command` | string | turbo/npm/pnpm/yarn | Typecheck command |
-| `bundle-size` | string | `.size-limit.json` | Run size-limit |
-| `license-check` | string | default: true | License checker |
-| `security-audit` | string | default: true | Security audit |
-| `audit-level` | string | default: critical | Audit severity |
+Job summaries remain enabled for low-noise drill-down.
 
-**Test matrix:** Each Node version in the matrix runs its own `npm ci`/`pnpm install`/`yarn install` to avoid cross-version native module issues.
+## Reliability
 
-### `commitlint.yml` — Commit Linting
+- Fixture matrix workflow: `.github/workflows/self-test-matrix.yml`
+- Fixture sources: `fixtures/`
+- Nightly validation scheduled
 
-Works on both pull_request and push events. Uses `npx --yes @commitlint/cli` so no local devDeps are required (though you still need a `commitlint.config.js` or equivalent config).
+## Development
 
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `package-manager` | string | `npm` | Package manager for corepack |
-
-### `coverage.yml` — Post-Merge Coverage
-
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `node-version` | string | `22` | Node.js version |
-| `package-manager` | string | `npm` | Package manager |
-| `coverage-command` | string | `npx vitest run --coverage` | Coverage command |
-| `has-build` | boolean | `true` | Run build first |
-| `build-command` | string | auto | Build command |
-
-### `release.yml` — npm Publish + Release Notes
-
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `node-version` | string | `22` | Node.js version |
-| `package-manager` | string | `npm` | Package manager |
-| `package-name` | string | **required** | npm package name |
-| `smoke-test-command` | string | `''` | Custom smoke test |
-| `npm-publish` | boolean | `true` | Publish to npm |
-
-Secrets: `npm-token` (required if `npm-publish`)
-
-### `scheduled.yml` — Weekly Maintenance
-
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `package-manager` | string | `npm` | Package manager |
-| `stale-days` | number | `60` | Days before stale |
-| `stale-close-days` | number | `14` | Days to close after stale |
-| `audit-level` | string | `high` | Audit severity |
-| `exempt-labels` | string | `pinned,security,enhancement` | Exempt labels |
-
-## Concurrency
-
-All reusable workflows include concurrency blocks that use the caller's workflow/ref context. For best results, also add concurrency to your caller workflow:
-
-```yaml
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-```
-
-## Examples
-
-See `examples/` for ready-to-copy consumer workflows:
-
-- **`minimal/`** — Zero-config, just works
-- **`npm-package/`** — Libraries (with release, coverage, commitlint)
-- **`web-app/`** — Next.js apps (override prettier/bundle-size off)
-- **`monorepo/`** — Turbo monorepos (override commands)
-
-## Reference Configs
-
-`tooling/` and `hooks/` directories contain reference configurations:
-
-- `tooling/commitlint.config.js` — Conventional commits
-- `tooling/.lintstagedrc.json` — lint-staged
-- `tooling/.size-limit.json` — Bundle size limits
-- `hooks/commit-msg` — Husky commit-msg hook
-- `hooks/pre-commit` — Husky pre-commit hook
-
-## Design Principles
-
-- **Zero-config** — Auto-detects everything, works out of the box
-- **Overridable** — Any input overrides detection
-- **SHA-pinned actions** — All third-party actions use commit SHAs
-- **Scoped permissions** — Minimal `permissions` blocks
-- **Concurrency control** — All workflows cancel in-progress runs on same ref
-- **Timeouts** — Every job has a timeout
-- **Multi-PM support** — npm, pnpm, and yarn work out of the box
-- **Clear errors** — Missing scripts produce helpful messages, not cryptic failures
+- CLI source: `cli/`
+- Preset definitions: `presets/v1/`
+- Docs: `docs/`
+- Schema: `schema/citemplate.schema.json`
 
 ## License
 

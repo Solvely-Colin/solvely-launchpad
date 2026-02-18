@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solvely.dev/schemas/citemplate.schema.json",
+  "title": "Solvely Launchpad Policy",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "version": { "type": "integer", "enum": [1] },
+    "preset": {
+      "type": "string",
+      "enum": ["node-lib", "nextjs", "turbo", "bun", "pnpm-monorepo", "python", "go", "rust"]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "license": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "deny": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "audit_level": { "type": "string", "enum": ["critical", "high", "moderate", "low"] },
+            "dependency_review": { "type": "boolean" },
+            "codeql": { "type": "boolean" },
+            "sbom": { "type": "boolean" },
+            "slsa_provenance": { "type": "boolean" },
+            "ossf_scorecard": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "pr_feedback": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "mode": { "type": "string", "enum": ["aggregated"] },
+        "flaky_hints": { "type": "boolean" }
+      }
+    },
+    "branches": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "protected": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "required": ["version", "preset"]
+}

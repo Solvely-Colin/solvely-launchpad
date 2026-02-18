@@ -1,0 +1,11 @@
+{
+  "id": "nextjs",
+  "description": "Next.js web app with CI, coverage, and scheduled maintenance",
+  "requiredWorkflows": ["ci", "coverage", "scheduled"],
+  "packageManagers": ["npm", "pnpm", "yarn"],
+  "defaultOverrides": { "bundle-size": "false" },
+  "defaultPolicy": {
+    "checks": { "required": ["ci", "test"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}

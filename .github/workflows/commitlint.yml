@@ -1,5 +1,5 @@
 # Reusable commitlint workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/commitlint.yml@v1
+# Usage: uses: Solvely-Colin/solvely-launchpad/.github/workflows/commitlint.yml@v1
 
 name: Commitlint
 
@@ -40,7 +40,11 @@ jobs:
             echo "from=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
             echo "to=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
-            echo "from=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            BEFORE_SHA="${{ github.event.before }}"
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE_SHA="$(git rev-list --max-count=1 HEAD^ 2>/dev/null || true)"
+            fi
+            echo "from=${BEFORE_SHA:-${{ github.sha }}}" >> "$GITHUB_OUTPUT"
             echo "to=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 

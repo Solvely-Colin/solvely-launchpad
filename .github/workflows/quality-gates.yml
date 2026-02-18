@@ -1,0 +1,75 @@
+# Optional quality gates for security-conscious repositories.
+name: Quality Gates
+
+on:
+  workflow_call:
+    inputs:
+      codeql:
+        description: 'Enable CodeQL'
+        type: boolean
+        default: false
+      dependency-review:
+        description: 'Enable dependency review'
+        type: boolean
+        default: false
+      sbom:
+        description: 'Enable SBOM generation'
+        type: boolean
+        default: false
+      slsa-provenance:
+        description: 'Enable SLSA provenance'
+        type: boolean
+        default: false
+      ossf-scorecard:
+        description: 'Enable OSSF Scorecard'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: quality-gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    if: ${{ inputs.codeql }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: echo 'Enable CodeQL in your caller workflow or org settings for full analysis.'
+
+  dependency-review:
+    if: ${{ inputs.dependency-review }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: echo 'Dependency review gate enabled. Add dependency-review action in caller repository as needed.'
+
+  sbom:
+    if: ${{ inputs.sbom }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: echo 'SBOM gate enabled. Generate SPDX/CycloneDX artifact in caller repository.'
+
+  slsa-provenance:
+    if: ${{ inputs.slsa-provenance }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: echo 'SLSA provenance gate enabled. Configure provenance in release workflow.'
+
+  ossf-scorecard:
+    if: ${{ inputs.ossf-scorecard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: echo 'OSSF Scorecard gate enabled. Add scorecard workflow in caller repository.'

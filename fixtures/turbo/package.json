@@ -1,0 +1,10 @@
+{
+  "name": "fixture-turbo",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint"
+  }
+}

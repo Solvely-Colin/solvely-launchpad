@@ -1,0 +1,11 @@
+{
+  "name": "fixture-node-lib",
+  "private": true,
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test",
+    "lint": "echo lint",
+    "format:check": "echo format",
+    "typecheck": "echo typecheck"
+  }
+}

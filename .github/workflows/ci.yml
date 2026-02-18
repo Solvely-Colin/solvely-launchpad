@@ -1,5 +1,5 @@
 # Reusable CI workflow — zero-config with auto-detection, fully overridable
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
+# Usage: uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 
 name: CI
 
@@ -62,9 +62,14 @@ on:
         description: 'npm audit level'
         type: string
         default: ''
+      package-manager:
+        description: 'Force package manager (npm, pnpm, yarn). Empty = auto-detect'
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -106,18 +111,26 @@ jobs:
         shell: bash
         run: |
           # === Package manager ===
-          if [ -f "pnpm-lock.yaml" ]; then
+          PM_OVERRIDE="${{ inputs.package-manager }}"
+          if [ -n "$PM_OVERRIDE" ]; then
+            PM="$PM_OVERRIDE"
+            if [ "$PM" = "pnpm" ]; then
+              INSTALL="pnpm install --frozen-lockfile"
+            elif [ "$PM" = "yarn" ]; then
+              INSTALL="yarn install --frozen-lockfile"
+            else
+              PM="npm"
+              INSTALL="npm ci"
+            fi
+          elif [ -f "pnpm-lock.yaml" ]; then
             PM="pnpm"
             INSTALL="pnpm install --frozen-lockfile"
-            AUDIT_CMD="pnpm audit"
           elif [ -f "yarn.lock" ]; then
             PM="yarn"
             INSTALL="yarn install --frozen-lockfile"
-            AUDIT_CMD="yarn audit"
           else
             PM="npm"
             INSTALL="npm ci"
-            AUDIT_CMD="npm audit"
           fi
 
           # === Monorepo ===
@@ -238,6 +251,13 @@ jobs:
           OUT_LINT_CMD=$(resolve_str "${{ inputs.lint-command }}" "$LINT_CMD")
           OUT_FORMAT_CMD=$(resolve_str "${{ inputs.format-command }}" "$FORMAT_CMD")
           OUT_TC_CMD=$(resolve_str "${{ inputs.typecheck-command }}" "$TC_CMD")
+          if [ "$PM" = "pnpm" ]; then
+            AUDIT_RUN="pnpm audit --audit-level=${OUT_AUDIT_LVL}"
+          elif [ "$PM" = "yarn" ]; then
+            AUDIT_RUN="yarn audit --level ${OUT_AUDIT_LVL}"
+          else
+            AUDIT_RUN="npm audit --audit-level=${OUT_AUDIT_LVL}"
+          fi
 
           # === Write outputs ===
           {
@@ -256,7 +276,7 @@ jobs:
             echo "format-command=${OUT_FORMAT_CMD}"
             echo "typecheck-command=${OUT_TC_CMD}"
             echo "install-command=${INSTALL}"
-            echo "audit-command=${AUDIT_CMD}"
+            echo "audit-command=${AUDIT_RUN}"
             echo "license-check=${OUT_LICENSE}"
             echo "security-audit=${OUT_AUDIT}"
             echo "audit-level=${OUT_AUDIT_LVL}"
@@ -305,6 +325,59 @@ jobs:
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+
+  policy:
+    name: Policy check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: detect
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Validate .citemplate.yml
+        shell: bash
+        run: |
+          if [ ! -f ".citemplate.yml" ]; then
+            echo "No .citemplate.yml found; skipping policy enforcement."
+            exit 0
+          fi
+
+          echo "Found .citemplate.yml; validating keys and values."
+
+          if ! grep -q '^version:' .citemplate.yml; then
+            echo "::error::Missing required key: version"
+            exit 1
+          fi
+          if ! grep -q '^preset:' .citemplate.yml; then
+            echo "::error::Missing required key: preset"
+            exit 1
+          fi
+
+          # Unknown top-level keys are warnings in v1.x
+          while IFS= read -r key; do
+            case "$key" in
+              version|preset|checks|pr_feedback|branches) ;;
+              *) echo "::warning::Unknown top-level key in .citemplate.yml: $key" ;;
+            esac
+          done < <(grep -E '^[a-zA-Z_][a-zA-Z0-9_]*:' .citemplate.yml | cut -d: -f1)
+
+          if grep -q 'audit_level:' .citemplate.yml; then
+            LVL=$(grep -E 'audit_level:' .citemplate.yml | head -n1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d "'" | xargs)
+            case "$LVL" in
+              critical|high|moderate|low) ;;
+              *)
+                echo "::error::Invalid audit_level '$LVL'. Allowed: critical, high, moderate, low."
+                exit 1
+                ;;
+            esac
+          fi
+
+          if grep -q '^branches:' .citemplate.yml && grep -q 'protected:' .citemplate.yml; then
+            if ! grep -E 'protected:.*main|^- main$' .citemplate.yml >/dev/null; then
+              echo "::warning::branches.protected does not include main."
+            fi
+          fi
+
+          echo "Policy validation complete."
 
   lint:
     name: Lint
@@ -443,7 +516,7 @@ jobs:
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
-      - run: ${{ needs.detect.outputs.audit-command }} --audit-level=${{ needs.detect.outputs.audit-level }}
+      - run: ${{ needs.detect.outputs.audit-command }}
 
   license-check:
     name: License check
@@ -488,3 +561,73 @@ jobs:
           path: dist
           key: dist-${{ github.sha }}
       - run: npx size-limit
+
+  pr-feedback:
+    name: PR feedback
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size]
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    steps:
+      - name: Publish aggregated PR comment
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RES_POLICY: ${{ needs.policy.result }}
+          RES_LINT: ${{ needs.lint.result }}
+          RES_FORMAT: ${{ needs.format.result }}
+          RES_TYPECHECK: ${{ needs.typecheck.result }}
+          RES_BUILD: ${{ needs.build.result }}
+          RES_TEST: ${{ needs.test.result }}
+          RES_AUDIT: ${{ needs.security-audit.result }}
+          RES_LICENSE: ${{ needs.license-check.result }}
+          RES_BUNDLE: ${{ needs.bundle-size.result }}
+        shell: bash
+        run: |
+          MARKER="<!-- launchpad:aggregated-feedback -->"
+          BODY=$(cat <<'EOF'
+          <!-- launchpad:aggregated-feedback -->
+          ## CI Template Summary
+
+          | Check | Result |
+          |---|---|
+          | Policy | __RES_POLICY__ |
+          | Lint | __RES_LINT__ |
+          | Format | __RES_FORMAT__ |
+          | Typecheck | __RES_TYPECHECK__ |
+          | Build | __RES_BUILD__ |
+          | Tests | __RES_TEST__ |
+          | Security audit | __RES_AUDIT__ |
+          | License check | __RES_LICENSE__ |
+          | Bundle size | __RES_BUNDLE__ |
+
+          ### Deltas
+          - Coverage delta: available when coverage workflow artifacts are present.
+          - Bundle delta: size-limit output is shown in job logs and summaries.
+
+          ### Flaky Test Hints
+          - If tests fail intermittently, rerun failed jobs and compare stack traces.
+          - Repeated timeout/network failures usually indicate flake rather than regression.
+          EOF
+          )
+
+          BODY="${BODY/__RES_POLICY__/$RES_POLICY}"
+          BODY="${BODY/__RES_LINT__/$RES_LINT}"
+          BODY="${BODY/__RES_FORMAT__/$RES_FORMAT}"
+          BODY="${BODY/__RES_TYPECHECK__/$RES_TYPECHECK}"
+          BODY="${BODY/__RES_BUILD__/$RES_BUILD}"
+          BODY="${BODY/__RES_TEST__/$RES_TEST}"
+          BODY="${BODY/__RES_AUDIT__/$RES_AUDIT}"
+          BODY="${BODY/__RES_LICENSE__/$RES_LICENSE}"
+          BODY="${BODY/__RES_BUNDLE__/$RES_BUNDLE}"
+
+          EXISTING_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments --paginate \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -n1 || true)
+
+          if [ -n "$EXISTING_ID" ]; then
+            gh api repos/$REPO/issues/comments/$EXISTING_ID -X PATCH -f body="$BODY" >/dev/null
+          else
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -X POST -f body="$BODY" >/dev/null
+          fi

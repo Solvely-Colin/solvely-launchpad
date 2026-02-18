@@ -1,0 +1,8 @@
+{
+  "name": "fixture-bun",
+  "private": true,
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test"
+  }
+}
