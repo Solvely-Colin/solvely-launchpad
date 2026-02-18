@@ -1,6 +1,12 @@
 {
   "$schema": "https://mintlify.com/schema.json",
   "name": "Solvely Launchpad",
+  "favicon": "/docs/favicon.svg",
+  "colors": {
+    "primary": "#0A7A5A",
+    "light": "#2BAA85",
+    "dark": "#06523D"
+  },
   "navigation": [
     {
       "group": "Get Started",
