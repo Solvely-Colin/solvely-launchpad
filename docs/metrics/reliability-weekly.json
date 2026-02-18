@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "timezone": "UTC",
+  "metrics": [
+    "self_test_runs",
+    "self_test_pass_rate",
+    "median_fixture_runtime_minutes",
+    "flaky_incidents",
+    "rolling_7d_launch_gate_met"
+  ],
+  "weeks": [
+    {
+      "week_start": "2026-02-16",
+      "self_test_runs": 100,
+      "self_test_pass_rate": 100.00,
+      "median_fixture_runtime_minutes": 0.36666666666666664,
+      "flaky_incidents": 0,
+      "rolling_7d_launch_gate_met": true,
+      "notes": "Updated via tooling/metrics/update-weekly.sh on 2026-02-18"
+    }
+  ]
+}
