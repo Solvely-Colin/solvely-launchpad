@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.5
+
+- Validate release automation after npm token + publish workflow stabilization.
+
+
 ## 0.1.4
 
 - Fix npm publish workflow by removing strict setup-node cache path requirement in subdirectory package releases.
