@@ -39,26 +39,37 @@ jobs:
     timeout-minutes: 5
     outputs:
       can-run-dependency-review: ${{ steps.preflight.outputs.can-run-dependency-review }}
+      dependency-review-supported: ${{ steps.preflight.outputs.dependency-review-supported }}
       event-name: ${{ steps.preflight.outputs.event-name }}
     steps:
       - name: Evaluate runtime context
         id: preflight
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           EVENT_NAME="${{ github.event_name }}"
           CAN_RUN_DEP_REVIEW="false"
+          DEP_REVIEW_SUPPORTED="false"
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
             CAN_RUN_DEP_REVIEW="true"
+            DEP_GRAPH_STATUS=$(gh api repos/${{ github.repository }} --jq '.security_and_analysis.dependency_graph.status // "disabled"' 2>/dev/null || echo "disabled")
+            if [ "$DEP_GRAPH_STATUS" = "enabled" ]; then
+              DEP_REVIEW_SUPPORTED="true"
+            fi
           fi
 
           echo "event-name=$EVENT_NAME" >> "$GITHUB_OUTPUT"
           echo "can-run-dependency-review=$CAN_RUN_DEP_REVIEW" >> "$GITHUB_OUTPUT"
+          echo "dependency-review-supported=$DEP_REVIEW_SUPPORTED" >> "$GITHUB_OUTPUT"
 
           echo "## Quality Gates Preflight" >> "$GITHUB_STEP_SUMMARY"
           echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Event | $EVENT_NAME |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Dependency review runnable | $CAN_RUN_DEP_REVIEW |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency review supported | $DEP_REVIEW_SUPPORTED |" >> "$GITHUB_STEP_SUMMARY"
 
   codeql:
     if: ${{ inputs.codeql }}
@@ -88,7 +99,7 @@ jobs:
         run: echo "::error::CodeQL failed. If autobuild is insufficient, add explicit build steps before the gate."
 
   dependency-review:
-    if: ${{ inputs.dependency-review && needs.preflight.outputs.can-run-dependency-review == 'true' }}
+    if: ${{ inputs.dependency-review && needs.preflight.outputs.can-run-dependency-review == 'true' && needs.preflight.outputs.dependency-review-supported == 'true' }}
     needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -209,6 +220,7 @@ jobs:
           INPUT_SCORECARD: ${{ inputs.ossf-scorecard }}
           EVENT_NAME: ${{ needs.preflight.outputs.event-name }}
           CAN_DEP_REVIEW: ${{ needs.preflight.outputs.can-run-dependency-review }}
+          DEP_REVIEW_SUPPORTED: ${{ needs.preflight.outputs.dependency-review-supported }}
           RES_CODEQL: ${{ needs.codeql.result }}
           RES_DEP_REVIEW: ${{ needs.dependency-review.result }}
           RES_SBOM: ${{ needs.sbom.result }}
@@ -247,6 +259,8 @@ jobs:
           DEP_REASON=""
           if [ "$INPUT_DEP_REVIEW" = "true" ] && [ "$CAN_DEP_REVIEW" != "true" ]; then
             DEP_REASON="requires pull_request event (current: $EVENT_NAME)"
+          elif [ "$INPUT_DEP_REVIEW" = "true" ] && [ "$DEP_REVIEW_SUPPORTED" != "true" ]; then
+            DEP_REASON="dependency graph is disabled in repository settings"
           fi
 
           gate_line "CodeQL" "$INPUT_CODEQL" "$RES_CODEQL" ""
