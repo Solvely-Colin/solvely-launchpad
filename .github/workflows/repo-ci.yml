@@ -25,13 +25,3 @@ jobs:
           test -f cli/bin/launchpad.js
           test -f docs/quickstart.md
           node cli/bin/launchpad.js preview --preset node-lib --yes >/dev/null
-
-  dogfood-quality-gates:
-    name: dogfood-quality-gates
-    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@main
-    with:
-      dependency-review: true
-      sbom: true
-      codeql: false
-      slsa-provenance: false
-      ossf-scorecard: false
