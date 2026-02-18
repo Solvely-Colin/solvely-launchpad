@@ -66,6 +66,26 @@ on:
         description: 'Force package manager (npm, pnpm, yarn). Empty = auto-detect'
         type: string
         default: ''
+      gate-codeql:
+        description: 'Enable CodeQL quality gate (opt-in)'
+        type: boolean
+        default: false
+      gate-dependency-review:
+        description: 'Enable dependency review quality gate (opt-in)'
+        type: boolean
+        default: false
+      gate-sbom:
+        description: 'Enable SBOM quality gate (opt-in)'
+        type: boolean
+        default: false
+      gate-slsa-provenance:
+        description: 'Enable SLSA provenance quality gate (opt-in)'
+        type: boolean
+        default: false
+      gate-ossf-scorecard:
+        description: 'Enable OSSF Scorecard quality gate (opt-in)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -331,53 +351,119 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: detect
+    outputs:
+      gate-codeql: ${{ steps.policy.outputs.gate-codeql }}
+      gate-dependency-review: ${{ steps.policy.outputs.gate-dependency-review }}
+      gate-sbom: ${{ steps.policy.outputs.gate-sbom }}
+      gate-slsa-provenance: ${{ steps.policy.outputs.gate-slsa-provenance }}
+      gate-ossf-scorecard: ${{ steps.policy.outputs.gate-ossf-scorecard }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Validate .citemplate.yml
+        id: policy
         shell: bash
+        env:
+          INPUT_GATE_CODEQL: ${{ inputs.gate-codeql }}
+          INPUT_GATE_DEPENDENCY_REVIEW: ${{ inputs.gate-dependency-review }}
+          INPUT_GATE_SBOM: ${{ inputs.gate-sbom }}
+          INPUT_GATE_SLSA_PROVENANCE: ${{ inputs.gate-slsa-provenance }}
+          INPUT_GATE_OSSF_SCORECARD: ${{ inputs.gate-ossf-scorecard }}
         run: |
+          bool_or() {
+            local a="$1"
+            local b="$2"
+            if [ "$a" = "true" ] || [ "$b" = "true" ]; then
+              echo "true"
+            else
+              echo "false"
+            fi
+          }
+
+          get_bool_value() {
+            local key="$1"
+            local out="false"
+            if grep -Eq "^[[:space:]]*${key}:[[:space:]]*(true|false)[[:space:]]*$" .citemplate.yml; then
+              out=$(grep -E "^[[:space:]]*${key}:[[:space:]]*(true|false)[[:space:]]*$" .citemplate.yml | head -n1 | awk -F':' '{print $2}' | xargs)
+            fi
+            echo "$out"
+          }
+
+          POLICY_GATE_CODEQL="false"
+          POLICY_GATE_DEPENDENCY_REVIEW="false"
+          POLICY_GATE_SBOM="false"
+          POLICY_GATE_SLSA_PROVENANCE="false"
+          POLICY_GATE_OSSF_SCORECARD="false"
+
           if [ ! -f ".citemplate.yml" ]; then
             echo "No .citemplate.yml found; skipping policy enforcement."
-            exit 0
-          fi
+          else
+            echo "Found .citemplate.yml; validating keys and values."
 
-          echo "Found .citemplate.yml; validating keys and values."
-
-          if ! grep -q '^version:' .citemplate.yml; then
-            echo "::error::Missing required key: version"
-            exit 1
-          fi
-          if ! grep -q '^preset:' .citemplate.yml; then
-            echo "::error::Missing required key: preset"
-            exit 1
-          fi
-
-          # Unknown top-level keys are warnings in v1.x
-          while IFS= read -r key; do
-            case "$key" in
-              version|preset|checks|pr_feedback|branches) ;;
-              *) echo "::warning::Unknown top-level key in .citemplate.yml: $key" ;;
-            esac
-          done < <(grep -E '^[a-zA-Z_][a-zA-Z0-9_]*:' .citemplate.yml | cut -d: -f1)
-
-          if grep -q 'audit_level:' .citemplate.yml; then
-            LVL=$(grep -E 'audit_level:' .citemplate.yml | head -n1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d "'" | xargs)
-            case "$LVL" in
-              critical|high|moderate|low) ;;
-              *)
-                echo "::error::Invalid audit_level '$LVL'. Allowed: critical, high, moderate, low."
-                exit 1
-                ;;
-            esac
-          fi
-
-          if grep -q '^branches:' .citemplate.yml && grep -q 'protected:' .citemplate.yml; then
-            if ! grep -E 'protected:.*main|^- main$' .citemplate.yml >/dev/null; then
-              echo "::warning::branches.protected does not include main."
+            if ! grep -q '^version:' .citemplate.yml; then
+              echo "::error::Missing required key: version"
+              exit 1
             fi
+            if ! grep -q '^preset:' .citemplate.yml; then
+              echo "::error::Missing required key: preset"
+              exit 1
+            fi
+
+            # Unknown top-level keys are warnings in v1.x
+            while IFS= read -r key; do
+              case "$key" in
+                version|preset|checks|pr_feedback|branches) ;;
+                *) echo "::warning::Unknown top-level key in .citemplate.yml: $key" ;;
+              esac
+            done < <(grep -E '^[a-zA-Z_][a-zA-Z0-9_]*:' .citemplate.yml | cut -d: -f1)
+
+            if grep -q 'audit_level:' .citemplate.yml; then
+              LVL=$(grep -E 'audit_level:' .citemplate.yml | head -n1 | awk -F': ' '{print $2}' | tr -d '"' | tr -d "'" | xargs)
+              case "$LVL" in
+                critical|high|moderate|low) ;;
+                *)
+                  echo "::error::Invalid audit_level '$LVL'. Allowed: critical, high, moderate, low."
+                  exit 1
+                  ;;
+              esac
+            fi
+
+            if grep -q '^branches:' .citemplate.yml && grep -q 'protected:' .citemplate.yml; then
+              if ! grep -E 'protected:.*main|^- main$' .citemplate.yml >/dev/null; then
+                echo "::warning::branches.protected does not include main."
+              fi
+            fi
+
+            POLICY_GATE_CODEQL=$(get_bool_value codeql)
+            POLICY_GATE_DEPENDENCY_REVIEW=$(get_bool_value dependency_review)
+            POLICY_GATE_SBOM=$(get_bool_value sbom)
+            POLICY_GATE_SLSA_PROVENANCE=$(get_bool_value slsa_provenance)
+            POLICY_GATE_OSSF_SCORECARD=$(get_bool_value ossf_scorecard)
+
+            echo "Policy validation complete."
           fi
 
-          echo "Policy validation complete."
+          GATE_CODEQL=$(bool_or "$INPUT_GATE_CODEQL" "$POLICY_GATE_CODEQL")
+          GATE_DEPENDENCY_REVIEW=$(bool_or "$INPUT_GATE_DEPENDENCY_REVIEW" "$POLICY_GATE_DEPENDENCY_REVIEW")
+          GATE_SBOM=$(bool_or "$INPUT_GATE_SBOM" "$POLICY_GATE_SBOM")
+          GATE_SLSA_PROVENANCE=$(bool_or "$INPUT_GATE_SLSA_PROVENANCE" "$POLICY_GATE_SLSA_PROVENANCE")
+          GATE_OSSF_SCORECARD=$(bool_or "$INPUT_GATE_OSSF_SCORECARD" "$POLICY_GATE_OSSF_SCORECARD")
+
+          {
+            echo "gate-codeql=$GATE_CODEQL"
+            echo "gate-dependency-review=$GATE_DEPENDENCY_REVIEW"
+            echo "gate-sbom=$GATE_SBOM"
+            echo "gate-slsa-provenance=$GATE_SLSA_PROVENANCE"
+            echo "gate-ossf-scorecard=$GATE_OSSF_SCORECARD"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "## Policy Security Gate Decisions" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Gate | Enabled |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CodeQL | $GATE_CODEQL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency review | $GATE_DEPENDENCY_REVIEW |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SBOM | $GATE_SBOM |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SLSA provenance | $GATE_SLSA_PROVENANCE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| OSSF Scorecard | $GATE_OSSF_SCORECARD |" >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     name: Lint
@@ -562,11 +648,23 @@ jobs:
           key: dist-${{ github.sha }}
       - run: npx size-limit
 
+  quality-gates:
+    name: Quality gates
+    needs: [policy]
+    if: ${{ needs.policy.outputs.gate-codeql == 'true' || needs.policy.outputs.gate-dependency-review == 'true' || needs.policy.outputs.gate-sbom == 'true' || needs.policy.outputs.gate-slsa-provenance == 'true' || needs.policy.outputs.gate-ossf-scorecard == 'true' }}
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
+    with:
+      codeql: ${{ needs.policy.outputs.gate-codeql == 'true' }}
+      dependency-review: ${{ needs.policy.outputs.gate-dependency-review == 'true' }}
+      sbom: ${{ needs.policy.outputs.gate-sbom == 'true' }}
+      slsa-provenance: ${{ needs.policy.outputs.gate-slsa-provenance == 'true' }}
+      ossf-scorecard: ${{ needs.policy.outputs.gate-ossf-scorecard == 'true' }}
+
   pr-feedback:
     name: PR feedback
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size]
+    needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size, quality-gates]
     if: ${{ always() && github.event_name == 'pull_request' }}
     steps:
       - name: Publish aggregated PR comment
@@ -584,6 +682,7 @@ jobs:
           RES_AUDIT: ${{ needs.security-audit.result }}
           RES_LICENSE: ${{ needs.license-check.result }}
           RES_BUNDLE: ${{ needs.bundle-size.result }}
+          RES_QUALITY_GATES: ${{ needs.quality-gates.result }}
         shell: bash
         run: |
           MARKER="<!-- launchpad:aggregated-feedback -->"
@@ -602,6 +701,7 @@ jobs:
           | Security audit | __RES_AUDIT__ |
           | License check | __RES_LICENSE__ |
           | Bundle size | __RES_BUNDLE__ |
+          | Quality gates | __RES_QUALITY_GATES__ |
 
           ### Deltas
           - Coverage delta: available when coverage workflow artifacts are present.
@@ -622,6 +722,7 @@ jobs:
           BODY="${BODY/__RES_AUDIT__/$RES_AUDIT}"
           BODY="${BODY/__RES_LICENSE__/$RES_LICENSE}"
           BODY="${BODY/__RES_BUNDLE__/$RES_BUNDLE}"
+          BODY="${BODY/__RES_QUALITY_GATES__/$RES_QUALITY_GATES}"
 
           EXISTING_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments --paginate \
             --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -n1 || true)

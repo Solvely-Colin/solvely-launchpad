@@ -132,6 +132,23 @@ Enable independently via policy config:
 - SLSA provenance
 - OSSF Scorecard
 
+Example:
+
+```yaml
+checks:
+  security:
+    dependency_review: true
+    sbom: true
+    codeql: false
+    slsa_provenance: false
+    ossf_scorecard: false
+```
+
+Notes:
+
+- Dependency review runs only for `pull_request` events and is skipped (not failed) on other triggers.
+- `ci.yml` merges policy toggles with explicit gate inputs and enables a gate when either source is `true`.
+
 Details: [`docs/quality-gates.md`](docs/quality-gates.md)
 
 ## Release to npm (Automated)
