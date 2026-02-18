@@ -1,0 +1,10 @@
+{
+  "id": "node-lib",
+  "description": "Node.js library with tests, coverage, release, and scheduled maintenance",
+  "requiredWorkflows": ["ci", "coverage", "release", "scheduled", "commitlint"],
+  "packageManagers": ["npm", "pnpm", "yarn"],
+  "defaultPolicy": {
+    "checks": { "required": ["ci", "test"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}

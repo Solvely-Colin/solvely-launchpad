@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PRESET_DIR = path.resolve(__dirname, '../../presets/v1');
+const PRESET_DIR = path.resolve(__dirname, '../presets/v1');
 const REPO_REF = 'Solvely-Colin/solvely-launchpad';
 const VERSION_REF = 'v1';
 
@@ -108,10 +108,10 @@ function planFiles(cwd, preset, pm, writePolicy) {
   }
 
   const readmePath = path.join(cwd, 'README.md');
-  const snippet = '\n## CI/CD\n\nManaged by `@solvely/launchpad`. Update with:\n\n```bash\nnpx @solvely/launchpad migrate --from v1 --to v1.x\n```\n';
+  const snippet = '\n## CI/CD\n\nManaged by `solvely-launchpad`. Update with:\n\n```bash\nnpx solvely-launchpad migrate --from v1 --to v1.x\n```\n';
   if (fs.existsSync(readmePath)) {
     const curr = fs.readFileSync(readmePath, 'utf8');
-    if (!curr.includes('Managed by `@solvely/launchpad`')) {
+    if (!curr.includes('Managed by `solvely-launchpad`')) {
       files.push({ path: readmePath, content: `${curr.trimEnd()}${snippet}\n` });
     }
   }

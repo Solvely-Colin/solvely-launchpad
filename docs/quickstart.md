@@ -3,7 +3,7 @@
 ## CLI (recommended)
 
 ```bash
-npx @solvely/launchpad init --preset node-lib --yes
+npx solvely-launchpad init --preset node-lib --yes
 ```
 
 ## GitHub-only setup

@@ -1,10 +1,10 @@
 {
-  "name": "@solvely/launchpad",
+  "name": "solvely-launchpad",
   "version": "0.1.0",
   "private": false,
   "description": "Adoption-first CI template bootstrap CLI",
   "bin": {
-    "launchpad": "./bin/launchpad.js"
+    "launchpad": "bin/launchpad.js"
   },
   "type": "module",
   "scripts": {

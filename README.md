@@ -5,7 +5,7 @@ Adoption-first reusable GitHub Actions + onboarding CLI for fast CI/CD rollout.
 ## What This Ships
 
 - Reusable workflows pinned at `@v1`
-- Standalone bootstrap CLI: `@solvely/launchpad`
+- Standalone bootstrap CLI: `solvely-launchpad`
 - Dual-channel setup: CLI + GitHub-only setup workflow
 - Preset system for 8 stacks
 - Policy-as-code via `.citemplate.yml`
@@ -27,15 +27,15 @@ Deprecation policy: `docs/policy/deprecations.md`
 ## 1) CLI
 
 ```bash
-npx @solvely/launchpad init --preset node-lib --yes
+npx solvely-launchpad init --preset node-lib --yes
 ```
 
 Useful commands:
 
 ```bash
-npx @solvely/launchpad preview --preset nextjs
-npx @solvely/launchpad doctor
-npx @solvely/launchpad migrate --from v1 --to v1.x
+npx solvely-launchpad preview --preset nextjs
+npx solvely-launchpad doctor
+npx solvely-launchpad migrate --from v1 --to v1.x
 ```
 
 ## 2) GitHub-only setup

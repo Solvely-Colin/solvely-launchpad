@@ -1,0 +1,14 @@
+{
+  "id": "pnpm-monorepo",
+  "description": "pnpm workspace monorepo with CI and scheduled maintenance",
+  "requiredWorkflows": ["ci", "scheduled", "commitlint"],
+  "packageManagers": ["pnpm"],
+  "defaultOverrides": {
+    "has-prettier": "false",
+    "bundle-size": "false"
+  },
+  "defaultPolicy": {
+    "checks": { "required": ["ci", "test"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}

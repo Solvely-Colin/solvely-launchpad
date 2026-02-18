@@ -1,4 +1,4 @@
-# @solvely/launchpad
+# solvely-launchpad
 
 Bootstrap and manage Solvely Launchpad workflows.
 
@@ -12,8 +12,8 @@ Bootstrap and manage Solvely Launchpad workflows.
 ## Examples
 
 ```bash
-npx @solvely/launchpad init --preset node-lib --yes
-npx @solvely/launchpad preview --preset nextjs
-npx @solvely/launchpad doctor
-npx @solvely/launchpad migrate --from v1 --to v1.x
+npx solvely-launchpad init --preset node-lib --yes
+npx solvely-launchpad preview --preset nextjs
+npx solvely-launchpad doctor
+npx solvely-launchpad migrate --from v1 --to v1.x
 ```

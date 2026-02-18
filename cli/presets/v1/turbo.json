@@ -1,0 +1,15 @@
+{
+  "id": "turbo",
+  "description": "Turbo monorepo with turbo commands and CI checks",
+  "requiredWorkflows": ["ci", "scheduled", "commitlint"],
+  "packageManagers": ["pnpm", "yarn", "npm"],
+  "defaultOverrides": {
+    "build-command": "turbo build",
+    "test-command": "turbo test",
+    "lint-command": "turbo lint"
+  },
+  "defaultPolicy": {
+    "checks": { "required": ["ci", "test"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}

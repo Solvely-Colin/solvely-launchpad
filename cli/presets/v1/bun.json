@@ -1,0 +1,10 @@
+{
+  "id": "bun",
+  "description": "Bun project with CI and scheduled maintenance",
+  "requiredWorkflows": ["ci", "scheduled"],
+  "packageManagers": ["npm", "pnpm", "yarn"],
+  "defaultPolicy": {
+    "checks": { "required": ["ci", "test"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}

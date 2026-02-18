@@ -1,0 +1,14 @@
+{
+  "id": "go",
+  "description": "Go project baseline workflows with policy and scheduled checks",
+  "requiredWorkflows": ["ci", "scheduled"],
+  "packageManagers": ["npm"],
+  "defaultOverrides": {
+    "security-audit": "false",
+    "license-check": "false"
+  },
+  "defaultPolicy": {
+    "checks": { "required": ["ci"] },
+    "pr_feedback": { "enabled": true, "mode": "aggregated", "flaky_hints": true }
+  }
+}
