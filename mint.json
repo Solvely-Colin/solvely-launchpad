@@ -7,6 +7,20 @@
     "light": "#2BAA85",
     "dark": "#06523D"
   },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/docs",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/docs/index",
+      "destination": "/quickstart"
+    }
+  ],
   "navigation": [
     {
       "group": "Get Started",
