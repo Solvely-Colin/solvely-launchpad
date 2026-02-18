@@ -32,7 +32,26 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      - name: Resolve package version
+        id: version
+        run: |
+          VERSION=$(node -e "console.log(require('./cli/package.json').version)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version already exists on npm
+        id: npm_check
+        run: |
+          PACKAGE="solvely-launchpad"
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view ${PACKAGE}@${VERSION} version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "${PACKAGE}@${VERSION} already published; skipping publish step."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
+        if: steps.npm_check.outputs.exists != 'true'
         run: |
           cd cli
           if [ -f package-lock.json ]; then
@@ -42,6 +61,7 @@ jobs:
           fi
 
       - name: Build if script exists
+        if: steps.npm_check.outputs.exists != 'true'
         run: |
           cd cli
           HAS_BUILD=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.build)")
@@ -52,6 +72,7 @@ jobs:
           fi
 
       - name: Publish package
+        if: steps.npm_check.outputs.exists != 'true'
         run: |
           cd cli
           npm publish --access public
