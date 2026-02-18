@@ -214,9 +214,13 @@ If your org blocks force-updating tags, the `sync-v1-tag` job will fail with a c
 ## Marketplace + Proof Pack
 
 - Marketplace launch checklist and copy: [`docs/marketplace.md`](docs/marketplace.md)
-- Public demo repo proof pack (node-lib, nextjs, turbo): [`docs/proof-pack.md`](docs/proof-pack.md)
+- Public proof pack (flagship + demos): [`docs/proof-pack.md`](docs/proof-pack.md)
 
-Current demo repos:
+Used by (real code):
+
+- https://github.com/Solvely-Colin/Quorum
+
+Secondary demo repos:
 
 - https://github.com/Solvely-Colin/launchpad-demo-node-lib
 - https://github.com/Solvely-Colin/launchpad-demo-nextjs
