@@ -1,0 +1,76 @@
+# Release — runs when a GitHub Release is published
+# Tier 3: Automated npm publish + release notes + smoke test
+#
+# Prerequisites: NPM_TOKEN secret with publish access
+# TODO: For web apps, replace npm publish with your deploy command (e.g., Vercel, AWS)
+
+name: Release to npm
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  release-notes:
+    name: Generate release notes
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Update release notes
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        with:
+          generate_release_notes: true
+
+  smoke-test:
+    # Verifies the published package is installable and runs
+    # TODO: update package name and CLI command for your project
+    name: Post-publish smoke test
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Wait for npm propagation and verify
+        run: |
+          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          PACKAGE="<package-name>"  # TODO: replace with your npm package name
+          for i in $(seq 1 12); do
+            npm view ${PACKAGE}@$VERSION version && break || sleep 10
+          done
+          # TODO: replace with your CLI command or a simple import test:
+          #   npx -p ${PACKAGE}@$VERSION <your-cli> --version
+          #   node -e "require('${PACKAGE}')"
+          echo "Smoke test: ${PACKAGE}@${VERSION} published successfully"
