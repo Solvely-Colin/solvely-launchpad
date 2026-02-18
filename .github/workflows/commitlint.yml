@@ -7,9 +7,13 @@ on:
   workflow_call:
     inputs:
       package-manager:
-        description: 'Package manager (npm, pnpm, yarn) — used for corepack'
+        description: 'Package manager (npm, pnpm, yarn) — reserved for future use'
         type: string
         default: 'npm'
+      strict:
+        description: 'Fail CI on invalid commit messages when true; warn-only when false'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -48,5 +52,48 @@ jobs:
             echo "to=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Write Launchpad baseline config
+        shell: bash
+        run: |
+          cat > .launchpad.commitlint.config.cjs <<'EOC'
+          module.exports = {
+            rules: {
+              'type-empty': [2, 'never'],
+              'subject-empty': [2, 'never'],
+              'header-max-length': [2, 'always', 100]
+            }
+          };
+          EOC
+
       - name: Lint commits
-        run: npx --yes @commitlint/cli --from ${{ steps.range.outputs.from }} --to ${{ steps.range.outputs.to }}
+        shell: bash
+        run: |
+          set +e
+          npx --yes @commitlint/cli \
+            --config .launchpad.commitlint.config.cjs \
+            --from "${{ steps.range.outputs.from }}" \
+            --to "${{ steps.range.outputs.to }}"
+          STATUS=$?
+          set -e
+
+          if [ "$STATUS" -eq 0 ]; then
+            echo "Commitlint passed."
+            echo "### Commitlint" >> "$GITHUB_STEP_SUMMARY"
+            echo "- mode: ${{ inputs.strict && 'strict' || 'warn' }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- result: pass" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${{ inputs.strict }}" = "true" ]; then
+            echo "::error::Commitlint failed in strict mode. Use Conventional Commits (e.g. feat:, fix:, chore:) or set strict: false."
+            echo "### Commitlint" >> "$GITHUB_STEP_SUMMARY"
+            echo "- mode: strict" >> "$GITHUB_STEP_SUMMARY"
+            echo "- result: fail" >> "$GITHUB_STEP_SUMMARY"
+            exit "$STATUS"
+          fi
+
+          echo "::warning::Commitlint failed, but strict mode is disabled. Use Conventional Commits to improve release/changelog automation."
+          echo "### Commitlint" >> "$GITHUB_STEP_SUMMARY"
+          echo "- mode: warn" >> "$GITHUB_STEP_SUMMARY"
+          echo "- result: warning (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
+          exit 0

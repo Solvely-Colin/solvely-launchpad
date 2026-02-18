@@ -6,6 +6,14 @@
 npx solvely-launchpad init --preset node-lib --yes
 ```
 
+Strict commitlint mode (optional):
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+```
+
+Default behavior is `strict: false` so commitlint warns without blocking CI.
+
 ## GitHub-only setup
 
 Use the `Setup Solvely Launchpad` workflow (`workflow_dispatch`) to open a setup PR.
