@@ -34,4 +34,4 @@ jobs:
       package-directory: cli
       npm-publish: true
     secrets:
-      npm-token: ${{ secrets.NPM_TOKEN }}
+      npm_token: ${{ secrets.NPM_TOKEN }}
