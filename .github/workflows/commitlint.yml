@@ -1,13 +1,22 @@
 # Reusable commitlint workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/commitlint.yml@main
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/commitlint.yml@v1
 
 name: Commitlint
 
 on:
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      package-manager:
+        description: 'Package manager (npm, pnpm, yarn) — used for corepack'
+        type: string
+        default: 'npm'
 
 permissions:
   contents: read
+
+concurrency:
+  group: commitlint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   commitlint:
@@ -18,9 +27,22 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+
+      - name: Determine commit range
+        id: range
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "from=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "to=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "from=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "to=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint commits
+        run: npx --yes @commitlint/cli --from ${{ steps.range.outputs.from }} --to ${{ steps.range.outputs.to }}

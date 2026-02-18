@@ -4,4 +4,4 @@ on:
     branches: [main]
 jobs:
   coverage:
-    uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@main
+    uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@v1

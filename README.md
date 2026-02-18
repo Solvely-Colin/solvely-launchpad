@@ -9,16 +9,25 @@ Create `.github/workflows/ci.yml` in your repo:
 ```yaml
 name: CI
 on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
-    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
 ```
 
 That's it. It detects TypeScript, ESLint, Prettier, build scripts, monorepo setup, package manager — and runs only what applies.
 
+## Versioning
+
+Use `@v1` for stability. The `v1` tag tracks the latest compatible release. Avoid `@main` in production — it may contain breaking changes.
+
 ## How Auto-Detection Works
 
-The `detect` job inspects your repo before anything runs:
+The `detect` job does a full checkout and inspects your repo before anything runs:
 
 | Detection | How |
 |-----------|-----|
@@ -28,12 +37,16 @@ The `detect` job inspects your repo before anything runs:
 | **Build** | `package.json` has `build` script |
 | **Tests** | `package.json` has `test` script (not the default placeholder) |
 | **Bundle size** | `.size-limit.json` exists |
-| **Monorepo** | `turbo.json` / `pnpm-workspace.yaml` / `package.json:workspaces` |
+| **Monorepo** | `turbo.json` / `pnpm-workspace.yaml` / `lerna.json` / `nx.json` / `package.json:workspaces` |
 | **Package manager** | `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, else npm |
 | **Node versions** | `.nvmrc` / `.node-version`, or default `["20","22"]` |
 | **Python/Go/Rust** | `pyproject.toml` / `go.mod` / `Cargo.toml` (future use) |
 
 Monorepos with `turbo.json` automatically use `turbo build`, `turbo test`, etc.
+
+### Package Manager Support
+
+All workflows respect the detected package manager (npm, pnpm, yarn). Install commands, audit commands, and build commands adapt automatically. For pnpm/yarn projects, corepack is enabled automatically.
 
 ### Overriding Detection
 
@@ -42,7 +55,7 @@ Any explicit input **overrides** auto-detection. Mix and match:
 ```yaml
 jobs:
   ci:
-    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+    uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
     with:
       has-prettier: false        # skip even if .prettierrc exists
       test-command: 'node --test' # override detected test command
@@ -69,23 +82,35 @@ All inputs are optional. Empty string = auto-detect.
 | `typecheck-command` | string | turbo/npm/pnpm/yarn | Typecheck command |
 | `bundle-size` | string | `.size-limit.json` | Run size-limit |
 | `license-check` | string | default: true | License checker |
-| `security-audit` | string | default: true | npm audit |
+| `security-audit` | string | default: true | Security audit |
 | `audit-level` | string | default: critical | Audit severity |
+
+**Test matrix:** Each Node version in the matrix runs its own `npm ci`/`pnpm install`/`yarn install` to avoid cross-version native module issues.
+
+### `commitlint.yml` — Commit Linting
+
+Works on both pull_request and push events. Uses `npx --yes @commitlint/cli` so no local devDeps are required (though you still need a `commitlint.config.js` or equivalent config).
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| `package-manager` | string | `npm` | Package manager for corepack |
 
 ### `coverage.yml` — Post-Merge Coverage
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `node-version` | string | `22` | Node.js version |
+| `package-manager` | string | `npm` | Package manager |
 | `coverage-command` | string | `npx vitest run --coverage` | Coverage command |
 | `has-build` | boolean | `true` | Run build first |
-| `build-command` | string | `npm run build` | Build command |
+| `build-command` | string | auto | Build command |
 
 ### `release.yml` — npm Publish + Release Notes
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `node-version` | string | `22` | Node.js version |
+| `package-manager` | string | `npm` | Package manager |
 | `package-name` | string | **required** | npm package name |
 | `smoke-test-command` | string | `''` | Custom smoke test |
 | `npm-publish` | boolean | `true` | Publish to npm |
@@ -96,21 +121,28 @@ Secrets: `npm-token` (required if `npm-publish`)
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
+| `package-manager` | string | `npm` | Package manager |
 | `stale-days` | number | `60` | Days before stale |
 | `stale-close-days` | number | `14` | Days to close after stale |
 | `audit-level` | string | `high` | Audit severity |
 | `exempt-labels` | string | `pinned,security,enhancement` | Exempt labels |
 
-### `commitlint.yml` — PR Commit Linting
+## Concurrency
 
-No inputs needed.
+All reusable workflows include concurrency blocks that use the caller's workflow/ref context. For best results, also add concurrency to your caller workflow:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
 
 ## Examples
 
 See `examples/` for ready-to-copy consumer workflows:
 
 - **`minimal/`** — Zero-config, just works
-- **`npm-package/`** — Libraries like Quorum (with release, coverage, commitlint)
+- **`npm-package/`** — Libraries (with release, coverage, commitlint)
 - **`web-app/`** — Next.js apps (override prettier/bundle-size off)
 - **`monorepo/`** — Turbo monorepos (override commands)
 
@@ -130,6 +162,11 @@ See `examples/` for ready-to-copy consumer workflows:
 - **Overridable** — Any input overrides detection
 - **SHA-pinned actions** — All third-party actions use commit SHAs
 - **Scoped permissions** — Minimal `permissions` blocks
-- **Concurrency control** — Cancel in-progress runs on same ref
+- **Concurrency control** — All workflows cancel in-progress runs on same ref
 - **Timeouts** — Every job has a timeout
-- **Cache sharing** — Dependencies cached across jobs
+- **Multi-PM support** — npm, pnpm, and yarn work out of the box
+- **Clear errors** — Missing scripts produce helpful messages, not cryptic failures
+
+## License
+
+MIT

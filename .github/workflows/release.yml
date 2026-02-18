@@ -1,5 +1,5 @@
 # Reusable release workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/release.yml@main
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/release.yml@v1
 
 name: Release to npm
 
@@ -10,6 +10,10 @@ on:
         description: 'Node.js version'
         type: string
         default: '22'
+      package-manager:
+        description: 'Package manager (npm, pnpm, yarn)'
+        type: string
+        default: 'npm'
       package-name:
         description: 'npm package name for smoke test'
         type: string
@@ -29,6 +33,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish to npm
@@ -43,11 +51,33 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: npm
+          cache: ${{ inputs.package-manager }}
           registry-url: https://registry.npmjs.org
 
-      - run: npm ci
-      - run: npm run build
+      - name: Enable corepack
+        if: inputs.package-manager != 'npm'
+        run: corepack enable
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
+
+      - name: Build
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            pnpm run build
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn build
+          else
+            npm run build
+          fi
+
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm-token }}

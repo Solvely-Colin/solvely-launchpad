@@ -1,5 +1,5 @@
 # Reusable CI workflow — zero-config with auto-detection, fully overridable
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@main
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/ci.yml@v1
 
 name: CI
 
@@ -66,6 +66,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect:
     name: Auto-detect project
@@ -87,6 +91,7 @@ jobs:
       format-command: ${{ steps.detect.outputs.format-command }}
       typecheck-command: ${{ steps.detect.outputs.typecheck-command }}
       install-command: ${{ steps.detect.outputs.install-command }}
+      audit-command: ${{ steps.detect.outputs.audit-command }}
       license-check: ${{ steps.detect.outputs.license-check }}
       security-audit: ${{ steps.detect.outputs.security-audit }}
       audit-level: ${{ steps.detect.outputs.audit-level }}
@@ -95,40 +100,6 @@ jobs:
       has-rust: ${{ steps.detect.outputs.has-rust }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          sparse-checkout: |
-            package.json
-            package-lock.json
-            pnpm-lock.yaml
-            yarn.lock
-            tsconfig.json
-            turbo.json
-            pnpm-workspace.yaml
-            .nvmrc
-            .node-version
-            .size-limit.json
-            .eslintrc
-            .eslintrc.js
-            .eslintrc.json
-            .eslintrc.yml
-            .eslintrc.yaml
-            eslint.config.js
-            eslint.config.mjs
-            eslint.config.cjs
-            eslint.config.ts
-            .prettierrc
-            .prettierrc.js
-            .prettierrc.json
-            .prettierrc.yml
-            .prettierrc.yaml
-            .prettierrc.toml
-            prettier.config.js
-            prettier.config.mjs
-            prettier.config.cjs
-            pyproject.toml
-            go.mod
-            Cargo.toml
-          sparse-checkout-cone-mode: false
 
       - name: Detect project configuration
         id: detect
@@ -138,12 +109,15 @@ jobs:
           if [ -f "pnpm-lock.yaml" ]; then
             PM="pnpm"
             INSTALL="pnpm install --frozen-lockfile"
+            AUDIT_CMD="pnpm audit"
           elif [ -f "yarn.lock" ]; then
             PM="yarn"
             INSTALL="yarn install --frozen-lockfile"
+            AUDIT_CMD="yarn audit"
           else
             PM="npm"
             INSTALL="npm ci"
+            AUDIT_CMD="npm audit"
           fi
 
           # === Monorepo ===
@@ -151,6 +125,10 @@ jobs:
           if [ -f "turbo.json" ] || [ -f "pnpm-workspace.yaml" ]; then
             IS_MONOREPO="true"
           elif [ -f "package.json" ] && node -e "const p=require('./package.json'); process.exit(p.workspaces ? 0 : 1)" 2>/dev/null; then
+            IS_MONOREPO="true"
+          fi
+          # Also check for lerna.json or nx.json
+          if [ -f "lerna.json" ] || [ -f "nx.json" ]; then
             IS_MONOREPO="true"
           fi
 
@@ -178,7 +156,6 @@ jobs:
                    eslint.config.js eslint.config.mjs eslint.config.cjs eslint.config.ts; do
             [ -f "$f" ] && DET_ESLINT="true" && break
           done
-          # Also check package.json eslintConfig
           if [ "$DET_ESLINT" = "false" ] && [ -f "package.json" ]; then
             node -e "process.exit(require('./package.json').eslintConfig ? 0 : 1)" 2>/dev/null && DET_ESLINT="true"
           fi
@@ -238,7 +215,6 @@ jobs:
           fi
 
           # === Apply overrides (input beats detection) ===
-          # Helper: resolve "true"/"false"/empty to detected value
           resolve_bool() {
             local input="$1" detected="$2"
             if [ -n "$input" ]; then echo "$input"; else echo "$detected"; fi
@@ -280,6 +256,7 @@ jobs:
             echo "format-command=${OUT_FORMAT_CMD}"
             echo "typecheck-command=${OUT_TC_CMD}"
             echo "install-command=${INSTALL}"
+            echo "audit-command=${AUDIT_CMD}"
             echo "license-check=${OUT_LICENSE}"
             echo "security-audit=${OUT_AUDIT}"
             echo "audit-level=${OUT_AUDIT_LVL}"
@@ -318,16 +295,16 @@ jobs:
           node-version: 22
           cache: ${{ needs.detect.outputs.package-manager }}
 
-      - name: Install with pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
 
       - run: ${{ needs.detect.outputs.install-command }}
 
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
 
   lint:
     name: Lint
@@ -340,13 +317,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Enable pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - name: Verify lint script exists
+        run: node -e "const s=require('./package.json').scripts||{}; if(!s.lint){console.error('❌ No \"lint\" script found in package.json. Add one or set has-eslint to false.');process.exit(1)}"
       - run: ${{ needs.detect.outputs.lint-command }}
 
   format:
@@ -360,13 +339,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Enable pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - name: Verify format script exists
+        run: node -e "const s=require('./package.json').scripts||{}; if(!s['format:check']&&!s.format){console.error('❌ No \"format:check\" or \"format\" script found in package.json. Add one or set has-prettier to false.');process.exit(1)}"
       - run: ${{ needs.detect.outputs.format-command }}
 
   typecheck:
@@ -380,13 +361,15 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Enable pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - name: Verify typecheck script exists
+        run: node -e "const s=require('./package.json').scripts||{}; if(!s.typecheck&&!s['type-check']){console.error('❌ No \"typecheck\" script found in package.json. Add one or set has-typescript to false.');process.exit(1)}"
       - run: ${{ needs.detect.outputs.typecheck-command }}
 
   build:
@@ -400,13 +383,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Enable pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - run: ${{ needs.detect.outputs.build-command }}
       - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
@@ -417,8 +400,8 @@ jobs:
     name: Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [detect, install, build]
-    if: ${{ always() && needs.detect.outputs.has-test == 'true' && needs.install.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    needs: [detect, build]
+    if: ${{ always() && needs.detect.outputs.has-test == 'true' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     strategy:
       matrix:
         node-version: ${{ fromJson(needs.detect.outputs.node-versions) }}
@@ -427,18 +410,19 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Enable pnpm
-        if: needs.detect.outputs.package-manager == 'pnpm'
-        run: corepack enable pnpm
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
-        with:
-          path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          cache: ${{ needs.detect.outputs.package-manager }}
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
+      - name: Install dependencies
+        run: ${{ needs.detect.outputs.install-command }}
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         if: needs.detect.outputs.has-build == 'true'
         with:
           path: dist
           key: dist-${{ github.sha }}
+      - name: Verify test script exists
+        run: node -e "const s=require('./package.json').scripts||{}; if(!s.test||s.test.includes('no test specified')){console.error('❌ No \"test\" script found in package.json.');process.exit(1)}"
       - run: ${{ needs.detect.outputs.test-command }}
 
   security-audit:
@@ -452,11 +436,14 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
-      - run: npm audit --audit-level=${{ needs.detect.outputs.audit-level }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+      - run: ${{ needs.detect.outputs.audit-command }} --audit-level=${{ needs.detect.outputs.audit-level }}
 
   license-check:
     name: License check
@@ -469,10 +456,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - run: npx license-checker --failOn "GPL-2.0;GPL-3.0;AGPL-3.0;LGPL-2.0;LGPL-2.1;LGPL-3.0;SSPL-1.0;EUPL-1.1;EUPL-1.2"
 
   bundle-size:
@@ -486,10 +476,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Enable corepack
+        if: needs.detect.outputs.package-manager != 'npm'
+        run: corepack enable
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: node_modules
-          key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
+          key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: dist

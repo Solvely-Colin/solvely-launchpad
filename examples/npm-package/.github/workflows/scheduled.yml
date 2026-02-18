@@ -5,4 +5,4 @@ on:
   workflow_dispatch:
 jobs:
   maintenance:
-    uses: Solvely-Colin/ci-template/.github/workflows/scheduled.yml@main
+    uses: Solvely-Colin/ci-template/.github/workflows/scheduled.yml@v1

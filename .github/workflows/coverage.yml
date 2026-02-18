@@ -1,5 +1,5 @@
 # Reusable coverage workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@main
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/coverage.yml@v1
 
 name: Tests & Coverage
 
@@ -10,6 +10,10 @@ on:
         description: 'Node.js version'
         type: string
         default: '22'
+      package-manager:
+        description: 'Package manager (npm, pnpm, yarn)'
+        type: string
+        default: 'npm'
       coverage-command:
         description: 'Coverage command'
         type: string
@@ -21,10 +25,14 @@ on:
       build-command:
         description: 'Build command'
         type: string
-        default: 'npm run build'
+        default: ''
 
 permissions:
   contents: read
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   coverage:
@@ -37,13 +45,36 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: npm
+          cache: ${{ inputs.package-manager }}
 
-      - run: npm ci
+      - name: Enable corepack
+        if: inputs.package-manager != 'npm'
+        run: corepack enable
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
 
       - name: Build
         if: ${{ inputs.has-build }}
-        run: ${{ inputs.build-command }}
+        run: |
+          BUILD_CMD="${{ inputs.build-command }}"
+          if [ -z "$BUILD_CMD" ]; then
+            if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+              BUILD_CMD="pnpm run build"
+            elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+              BUILD_CMD="yarn build"
+            else
+              BUILD_CMD="npm run build"
+            fi
+          fi
+          $BUILD_CMD
 
       - name: Run tests with coverage
         run: ${{ inputs.coverage-command }}

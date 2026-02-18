@@ -1,11 +1,15 @@
 # Reusable scheduled maintenance workflow — called by consumer repos
-# Usage: uses: Solvely-Colin/ci-template/.github/workflows/scheduled.yml@main
+# Usage: uses: Solvely-Colin/ci-template/.github/workflows/scheduled.yml@v1
 
 name: Scheduled Maintenance
 
 on:
   workflow_call:
     inputs:
+      package-manager:
+        description: 'Package manager (npm, pnpm, yarn)'
+        type: string
+        default: 'npm'
       stale-days:
         description: 'Days before marking issues stale'
         type: number
@@ -15,7 +19,7 @@ on:
         type: number
         default: 14
       audit-level:
-        description: 'npm audit level'
+        description: 'Audit level'
         type: string
         default: 'high'
       exempt-labels:
@@ -27,6 +31,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: scheduled-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   audit:
     name: Dependency audit
@@ -37,9 +45,28 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm audit --audit-level=${{ inputs.audit-level }}
+          cache: ${{ inputs.package-manager }}
+      - name: Enable corepack
+        if: inputs.package-manager != 'npm'
+        run: corepack enable
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
+      - name: Run audit
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            pnpm audit --audit-level=${{ inputs.audit-level }}
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn audit --level ${{ inputs.audit-level }}
+          else
+            npm audit --audit-level=${{ inputs.audit-level }}
+          fi
 
   stale:
     name: Stale issues
