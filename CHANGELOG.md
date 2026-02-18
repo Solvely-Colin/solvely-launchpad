@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.2
+
+- Fix reusable release workflow startup and package-directory publishing reliability.
+
 ## 0.1.1
 
 - Enable automated npm publish on GitHub release (`publish-launchpad`).
