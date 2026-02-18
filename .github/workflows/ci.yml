@@ -341,7 +341,7 @@ jobs:
 
       - run: ${{ needs.detect.outputs['install-command'] }}
 
-      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -479,7 +479,7 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -501,7 +501,7 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -523,7 +523,7 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -545,12 +545,12 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
       - run: ${{ needs.detect.outputs['build-command'] }}
-      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: dist
           key: dist-${{ github.sha }}
@@ -575,7 +575,7 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: ${{ needs.detect.outputs['install-command'] }}
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         if: needs.detect.outputs['has-build'] == 'true'
         with:
           path: dist
@@ -598,7 +598,7 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -618,7 +618,7 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
@@ -638,11 +638,11 @@ jobs:
       - name: Enable corepack
         if: needs.detect.outputs['package-manager'] != 'npm'
         run: corepack enable
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: node_modules
           key: node-modules-22-${{ github.sha }}-${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') }}
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v4
         with:
           path: dist
           key: dist-${{ github.sha }}
