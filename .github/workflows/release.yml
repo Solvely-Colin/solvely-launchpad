@@ -31,7 +31,7 @@ on:
         type: boolean
         default: true
     secrets:
-      npm-token:
+      npm_token:
         description: 'NPM_TOKEN for publishing'
         required: false
 
@@ -101,7 +101,7 @@ jobs:
           cd "${{ inputs.package-directory }}"
           npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm-token }}
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
 
   release-notes:
     name: Generate release notes
