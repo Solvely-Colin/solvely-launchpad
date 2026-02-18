@@ -8,7 +8,23 @@ All gates are opt-in and disabled by default.
 
 ## Enable gates
 
-You can enable gates either from `ci.yml` inputs or from `.citemplate.yml`:
+Call `quality-gates.yml` directly from your caller workflow and map `.citemplate.yml` (or explicit booleans) to its inputs.
+
+Example:
+
+```yaml
+jobs:
+  quality-gates:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
+    with:
+      dependency-review: true
+      sbom: true
+      codeql: false
+      slsa-provenance: false
+      ossf-scorecard: false
+```
+
+Policy values can still live in `.citemplate.yml`:
 
 ```yaml
 checks:
@@ -19,8 +35,6 @@ checks:
     slsa_provenance: false
     ossf_scorecard: false
 ```
-
-`ci.yml` merges both sources and enables a gate when either source sets it to `true`.
 
 ## Inputs
 
