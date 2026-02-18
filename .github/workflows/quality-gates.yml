@@ -38,9 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      can-run-dependency-review: ${{ steps.preflight.outputs.can-run-dependency-review }}
-      dependency-review-supported: ${{ steps.preflight.outputs.dependency-review-supported }}
-      event-name: ${{ steps.preflight.outputs.event-name }}
+      can-run-dependency-review: ${{ steps.preflight.outputs['can-run-dependency-review'] }}
+      dependency-review-supported: ${{ steps.preflight.outputs['dependency-review-supported'] }}
+      event-name: ${{ steps.preflight.outputs['event-name'] }}
     steps:
       - name: Evaluate runtime context
         id: preflight
@@ -99,7 +99,7 @@ jobs:
         run: echo "::error::CodeQL failed. If autobuild is insufficient, add explicit build steps before the gate."
 
   dependency-review:
-    if: ${{ inputs.dependency-review && needs.preflight.outputs.can-run-dependency-review == 'true' && needs.preflight.outputs.dependency-review-supported == 'true' }}
+    if: ${{ inputs['dependency-review'] && needs.preflight.outputs['can-run-dependency-review'] == 'true' && needs.preflight.outputs['dependency-review-supported'] == 'true' }}
     needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -144,7 +144,7 @@ jobs:
         run: echo "::error::SBOM generation failed. Ensure repository contents are readable and retry."
 
   slsa-provenance:
-    if: ${{ inputs.slsa-provenance }}
+    if: ${{ inputs['slsa-provenance'] }}
     needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -169,7 +169,7 @@ jobs:
         run: echo "::error::SLSA provenance failed. Ensure id-token and attestations permissions are granted."
 
   ossf-scorecard:
-    if: ${{ inputs.ossf-scorecard }}
+    if: ${{ inputs['ossf-scorecard'] }}
     needs: [preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -214,18 +214,18 @@ jobs:
         shell: bash
         env:
           INPUT_CODEQL: ${{ inputs.codeql }}
-          INPUT_DEP_REVIEW: ${{ inputs.dependency-review }}
+          INPUT_DEP_REVIEW: ${{ inputs['dependency-review'] }}
           INPUT_SBOM: ${{ inputs.sbom }}
-          INPUT_SLSA: ${{ inputs.slsa-provenance }}
-          INPUT_SCORECARD: ${{ inputs.ossf-scorecard }}
-          EVENT_NAME: ${{ needs.preflight.outputs.event-name }}
-          CAN_DEP_REVIEW: ${{ needs.preflight.outputs.can-run-dependency-review }}
-          DEP_REVIEW_SUPPORTED: ${{ needs.preflight.outputs.dependency-review-supported }}
+          INPUT_SLSA: ${{ inputs['slsa-provenance'] }}
+          INPUT_SCORECARD: ${{ inputs['ossf-scorecard'] }}
+          EVENT_NAME: ${{ needs.preflight.outputs['event-name'] }}
+          CAN_DEP_REVIEW: ${{ needs.preflight.outputs['can-run-dependency-review'] }}
+          DEP_REVIEW_SUPPORTED: ${{ needs.preflight.outputs['dependency-review-supported'] }}
           RES_CODEQL: ${{ needs.codeql.result }}
-          RES_DEP_REVIEW: ${{ needs.dependency-review.result }}
+          RES_DEP_REVIEW: ${{ needs['dependency-review'].result }}
           RES_SBOM: ${{ needs.sbom.result }}
-          RES_SLSA: ${{ needs.slsa-provenance.result }}
-          RES_SCORECARD: ${{ needs.ossf-scorecard.result }}
+          RES_SLSA: ${{ needs['slsa-provenance'].result }}
+          RES_SCORECARD: ${{ needs['ossf-scorecard'].result }}
         run: |
           gate_line() {
             local name="$1"
