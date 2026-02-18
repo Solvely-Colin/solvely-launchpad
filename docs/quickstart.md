@@ -50,6 +50,17 @@ When needed, set `with.install-command` to override install auto-detection (for 
 
 If you want security gates, call `quality-gates.yml` as a separate job in the same caller workflow.
 
+## First green CI in one PR cycle
+
+Use this default path for fastest onboarding:
+
+1. `npx solvely-launchpad init --preset <preset> --yes`
+2. Open PR with generated workflow files.
+3. If install fails, set `with.install-command` explicitly in caller workflow.
+4. If optional checks fail during migration, temporarily disable the specific check input and re-enable after baseline is stable.
+
+For repos without `package.json`, Launchpad skips release workflow generation automatically and prints a note explaining why.
+
 ## Auto deploy to npm on release
 
 This repository includes [`.github/workflows/publish-launchpad.yml`](../.github/workflows/publish-launchpad.yml).

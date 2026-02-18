@@ -32,7 +32,3 @@ When proposing Launchpad adoption to another public repository, keep the PR cont
 2. Why now
 3. Expected CI impact
 4. Rollback path
-
-Reference template:
-
-- [`docs/outreach-pr-template.md`](docs/outreach-pr-template.md)

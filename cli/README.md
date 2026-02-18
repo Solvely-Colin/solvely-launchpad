@@ -6,7 +6,7 @@ Bootstrap and manage Solvely Launchpad workflows.
 
 - `init`: detect preset/package manager and generate workflows
 - `preview`: show planned file operations without writing
-- `doctor`: validate `.citemplate.yml` and baseline CI files
+- `doctor`: validate policy + caller contract (`permissions`, `@v1` pins, quality-gates wiring hints)
 - `migrate`: apply safe migration transforms for `v1.x`
 
 ## Flags

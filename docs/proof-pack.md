@@ -23,9 +23,10 @@ Use this file as the single source of truth for public proof artifacts.
 
 ## Acceptance criteria
 
-- Public repo exists for each required preset.
-- Default branch CI is green.
-- README includes exact setup command used.
+- Flagship real-code adopter is public and active.
+- Active baseline demo repo is public with green default-branch CI.
+- Archived demos are clearly marked historical (not required for launch gate).
+- README/docs include exact setup command(s) used.
 - Launchpad workflow references `@v1`.
 - Linked from main README and docs index.
 

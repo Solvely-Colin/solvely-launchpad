@@ -5,6 +5,16 @@
 - Confirm workflow permissions include `contents: write` and `pull-requests: write`.
 - Confirm branch protection allows GitHub Actions bot push.
 
+## First CI run failed during install
+
+- If your repo layout needs custom bootstrap, set `with.install-command` in caller workflow.
+- If your repository has no root lockfile, keep `install-command` explicit for deterministic setup.
+
+## Release workflow was not generated
+
+- Expected for non-package repos (no `package.json`).
+- Also expected when init is run with `--app true` or `--no-release true`.
+
 ## Policy check failed
 
 - Ensure `.citemplate.yml` has `version` and `preset`.

@@ -241,6 +241,8 @@ If your org blocks force-updating tags, the `sync-v1-tag` job will fail with a c
 
 - Marketplace launch checklist and copy: [`docs/marketplace.md`](docs/marketplace.md)
 - Public proof pack (flagship + baseline demo): [`docs/proof-pack.md`](docs/proof-pack.md)
+- Required public proof set: flagship real-code adopter + active baseline demo
+- Historical references only: archived demos remain linked for context
 
 Used by (real code):
 

@@ -19,7 +19,10 @@ Long description:
 ## Week 3 checklist
 
 - [ ] Confirm reliability gate trend is healthy (>=95% pass over 7 days)
-- [ ] Publish/verify demo repos (node-lib, nextjs, turbo)
+- [ ] Verify canonical proof assets:
+  - [ ] flagship real-code adopter (`Quorum`)
+  - [ ] active baseline demo (`launchpad-demo-node-lib`)
+  - [ ] archived demos clearly marked historical only (`nextjs`, `turbo`)
 - [ ] Update badges and README proof links
 - [ ] Publish marketplace-facing metadata and copy
 - [ ] Post evidence-based launch update with adoption metrics
