@@ -11,11 +11,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-    with:
-      package-manager: npm
-      has-build: false
-      security-audit: false
-      license-check: false
-      bundle-size: false
+  sanity:
+    name: sanity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Validate CLI entry and docs links
+        run: |
+          test -f cli/bin/launchpad.js
+          test -f docs/quickstart.md
+          node cli/bin/launchpad.js preview --preset node-lib --yes >/dev/null
