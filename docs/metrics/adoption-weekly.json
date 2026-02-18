@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "timezone": "UTC",
+  "metrics": [
+    "external_repos_on_v1",
+    "setup_pr_merge_rate",
+    "time_to_first_green_ci_hours",
+    "weekly_active_repos",
+    "issues_response_sla_met"
+  ],
+  "weeks": [
+    {
+      "week_start": "2026-02-16",
+      "external_repos_on_v1": 0,
+      "setup_pr_merge_rate": null,
+      "time_to_first_green_ci_hours": null,
+      "weekly_active_repos": null,
+      "issues_response_sla_met": null,
+      "notes": "Updated via tooling/metrics/update-weekly.sh on 2026-02-18"
+    }
+  ]
+}

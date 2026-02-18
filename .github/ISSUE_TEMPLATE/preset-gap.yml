@@ -1,0 +1,45 @@
+name: Preset Gap
+description: Report missing behavior or poor defaults in a preset.
+title: "preset-gap: <preset> <short-description>"
+labels:
+  - preset-gap
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when a preset does not match real project expectations.
+  - type: input
+    id: preset
+    attributes:
+      label: Preset
+      placeholder: "nextjs"
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository URL
+      placeholder: "https://github.com/owner/repo"
+    validations:
+      required: true
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: Current behavior
+      description: What did Launchpad generate/do?
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What should be generated or configured instead?
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: Optional; include temporary manual fix.
+    validations:
+      required: false

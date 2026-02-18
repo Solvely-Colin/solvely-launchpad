@@ -1,0 +1,12 @@
+- name: setup-blocker
+  color: "B60205"
+  description: "Install/bootstrap failures blocking adoption"
+- name: preset-gap
+  color: "D93F0B"
+  description: "Preset behavior/defaults do not fit project requirements"
+- name: docs-gap
+  color: "0052CC"
+  description: "Docs are missing, unclear, or misleading"
+- name: quality-gate
+  color: "5319E7"
+  description: "Security/quality gate integration issue"

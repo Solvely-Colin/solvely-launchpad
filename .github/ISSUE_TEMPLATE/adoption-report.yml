@@ -1,0 +1,54 @@
+name: Adoption Report
+description: Record external adoption outcomes and weekly KPI updates.
+title: "adoption: <week-start-YYYY-MM-DD>"
+labels:
+  - docs-gap
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this report to log weekly adoption metrics and launch progress.
+  - type: input
+    id: week_start
+    attributes:
+      label: Week start (UTC)
+      placeholder: "2026-02-16"
+    validations:
+      required: true
+  - type: input
+    id: external_repos_on_v1
+    attributes:
+      label: external_repos_on_v1
+      placeholder: "15"
+    validations:
+      required: true
+  - type: input
+    id: setup_pr_merge_rate
+    attributes:
+      label: setup_pr_merge_rate
+      description: Use percentage format (for example 45%)
+      placeholder: "45%"
+    validations:
+      required: true
+  - type: input
+    id: weekly_active_repos
+    attributes:
+      label: weekly_active_repos
+      placeholder: "9"
+    validations:
+      required: true
+  - type: input
+    id: issues_response_sla_met
+    attributes:
+      label: issues_response_sla_met
+      description: First response within 72h
+      placeholder: "90%"
+    validations:
+      required: true
+  - type: textarea
+    id: learnings
+    attributes:
+      label: Key learnings
+      description: What changed this week and what should change next week?
+    validations:
+      required: true

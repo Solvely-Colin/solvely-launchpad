@@ -1,0 +1,55 @@
+name: Setup Failure
+description: Report onboarding/bootstrap failures for setup workflow or CLI init.
+title: "setup-blocker: <short-description>"
+labels:
+  - setup-blocker
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for install and bootstrap failures that block adoption.
+  - type: dropdown
+    id: path
+    attributes:
+      label: Setup path
+      options:
+        - CLI init
+        - GitHub setup workflow
+        - Manual reusable workflow setup
+    validations:
+      required: true
+  - type: input
+    id: preset
+    attributes:
+      label: Preset
+      placeholder: "node-lib"
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository URL
+      placeholder: "https://github.com/owner/repo"
+    validations:
+      required: true
+  - type: textarea
+    id: command_or_workflow
+    attributes:
+      label: Command or workflow input
+      placeholder: "npx solvely-launchpad init --preset node-lib --yes"
+    validations:
+      required: true
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure output
+      description: Paste relevant error logs or workflow links.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      placeholder: "Workflow files generated and first CI run passes"
+    validations:
+      required: true

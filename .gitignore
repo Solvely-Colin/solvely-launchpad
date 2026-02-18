@@ -1,0 +1,7 @@
+# OS-generated files
+.DS_Store
+**/.DS_Store
+
+# Local-only outreach tracking (keep prospecting private)
+docs/outreach/*.local.csv
+docs/outreach/*.private.csv
