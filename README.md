@@ -160,7 +160,6 @@ Launchpad updates one comment per PR (no spam), with CI outcomes in one table.
 | Policy | success |
 | Lint | success |
 | Tests | failure |
-| Quality gates | success |
 ```
 
 ## Security Gates (Opt-in)

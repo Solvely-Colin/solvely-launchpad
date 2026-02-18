@@ -648,23 +648,11 @@ jobs:
           key: dist-${{ github.sha }}
       - run: npx size-limit
 
-  quality-gates:
-    name: Quality gates
-    needs: [policy]
-    if: ${{ needs.policy.outputs['gate-codeql'] == 'true' || needs.policy.outputs['gate-dependency-review'] == 'true' || needs.policy.outputs['gate-sbom'] == 'true' || needs.policy.outputs['gate-slsa-provenance'] == 'true' || needs.policy.outputs['gate-ossf-scorecard'] == 'true' }}
-    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
-    with:
-      codeql: ${{ needs.policy.outputs['gate-codeql'] == 'true' }}
-      dependency-review: ${{ needs.policy.outputs['gate-dependency-review'] == 'true' }}
-      sbom: ${{ needs.policy.outputs['gate-sbom'] == 'true' }}
-      slsa-provenance: ${{ needs.policy.outputs['gate-slsa-provenance'] == 'true' }}
-      ossf-scorecard: ${{ needs.policy.outputs['gate-ossf-scorecard'] == 'true' }}
-
   pr-feedback:
     name: PR feedback
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size, quality-gates]
+    needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size]
     if: ${{ always() && github.event_name == 'pull_request' }}
     steps:
       - name: Publish aggregated PR comment
@@ -682,7 +670,6 @@ jobs:
           RES_AUDIT: ${{ needs['security-audit'].result }}
           RES_LICENSE: ${{ needs['license-check'].result }}
           RES_BUNDLE: ${{ needs['bundle-size'].result }}
-          RES_QUALITY_GATES: ${{ needs['quality-gates'].result }}
         shell: bash
         run: |
           MARKER="<!-- launchpad:aggregated-feedback -->"
@@ -701,7 +688,6 @@ jobs:
           | Security audit | __RES_AUDIT__ |
           | License check | __RES_LICENSE__ |
           | Bundle size | __RES_BUNDLE__ |
-          | Quality gates | __RES_QUALITY_GATES__ |
 
           ### Deltas
           - Coverage delta: available when coverage workflow artifacts are present.
@@ -722,7 +708,6 @@ jobs:
           BODY="${BODY/__RES_AUDIT__/$RES_AUDIT}"
           BODY="${BODY/__RES_LICENSE__/$RES_LICENSE}"
           BODY="${BODY/__RES_BUNDLE__/$RES_BUNDLE}"
-          BODY="${BODY/__RES_QUALITY_GATES__/$RES_QUALITY_GATES}"
 
           EXISTING_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments --paginate \
             --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -n1 || true)
