@@ -11,38 +11,38 @@
     {
       "group": "Get Started",
       "pages": [
-        "docs/index",
-        "docs/quickstart",
-        "docs/troubleshooting"
+        "index",
+        "quickstart",
+        "troubleshooting"
       ]
     },
     {
       "group": "Operations",
       "pages": [
-        "docs/quality-gates",
-        "docs/governance",
-        "docs/reliability",
-        "docs/adoption"
+        "quality-gates",
+        "governance",
+        "reliability",
+        "adoption"
       ]
     },
     {
       "group": "Presets",
       "pages": [
-        "docs/presets/node-lib",
-        "docs/presets/nextjs",
-        "docs/presets/turbo",
-        "docs/presets/bun",
-        "docs/presets/pnpm-monorepo",
-        "docs/presets/python",
-        "docs/presets/go",
-        "docs/presets/rust"
+        "presets/node-lib",
+        "presets/nextjs",
+        "presets/turbo",
+        "presets/bun",
+        "presets/pnpm-monorepo",
+        "presets/python",
+        "presets/go",
+        "presets/rust"
       ]
     },
     {
       "group": "Policy",
       "pages": [
-        "docs/migrations/v1",
-        "docs/policy/deprecations"
+        "migrations/v1",
+        "policy/deprecations"
       ]
     }
   ]
