@@ -589,7 +589,7 @@ jobs:
           MARKER="<!-- launchpad:aggregated-feedback -->"
           BODY=$(cat <<'EOF'
           <!-- launchpad:aggregated-feedback -->
-          ## CI Template Summary
+          ## Solvely Launchpad Summary
 
           | Check | Result |
           |---|---|

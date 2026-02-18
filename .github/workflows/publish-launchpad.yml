@@ -1,0 +1,36 @@
+name: Publish Launchpad
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-launchpad-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify NPM token is configured
+        run: |
+          if [ -z "${{ secrets.NPM_TOKEN }}" ]; then
+            echo "::error::Missing NPM_TOKEN secret. Add it in repository secrets before publishing releases."
+            exit 1
+          fi
+
+  publish:
+    name: Publish to npm
+    needs: preflight
+    uses: ./.github/workflows/release.yml
+    with:
+      package-manager: npm
+      package-name: solvely-launchpad
+      npm-publish: true
+    secrets:
+      npm-token: ${{ secrets.NPM_TOKEN }}
