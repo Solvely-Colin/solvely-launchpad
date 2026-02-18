@@ -116,6 +116,31 @@ jobs:
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 ```
 
+Optional override:
+- `install-command`: force a specific install step when auto-detection is not appropriate for your repo layout.
+
+Minimum caller contract:
+
+```yaml
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
+```
+
 Available reusable workflows:
 
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
@@ -173,6 +198,8 @@ Enable independently:
 - OSSF Scorecard
 
 Details: [`docs/quality-gates.md`](docs/quality-gates.md)
+
+`ci.yml` does not invoke `quality-gates.yml` internally. Call `quality-gates.yml` directly in your caller workflow when needed.
 
 ## Beta Support Policy
 

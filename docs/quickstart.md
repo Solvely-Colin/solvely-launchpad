@@ -24,6 +24,32 @@ Default behavior is `strict: false` so commitlint warns without blocking CI.
 
 Use the `Setup Solvely Launchpad` workflow (`workflow_dispatch`) to open a setup PR.
 
+## Minimum caller workflow contract
+
+```yaml
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
+```
+
+When needed, set `with.install-command` to override install auto-detection (for example, nested workspaces or smoke callers).
+
+If you want security gates, call `quality-gates.yml` as a separate job in the same caller workflow.
+
 ## Auto deploy to npm on release
 
 This repository includes [`.github/workflows/publish-launchpad.yml`](../.github/workflows/publish-launchpad.yml).
