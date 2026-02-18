@@ -31,6 +31,7 @@ jobs:
     with:
       package-manager: npm
       package-name: solvely-launchpad
+      package-directory: cli
       npm-publish: true
     secrets:
       npm-token: ${{ secrets.NPM_TOKEN }}

@@ -35,3 +35,17 @@ jobs:
 
       - name: Run fixture self-test
         run: ./.github/scripts/run-fixture-self-test.sh "${{ matrix.fixture }}"
+
+  matrix-gate:
+    name: matrix-gate
+    runs-on: ubuntu-latest
+    needs: fixtures
+    if: ${{ always() }}
+    steps:
+      - name: Enforce fixture matrix success
+        run: |
+          if [ "${{ needs.fixtures.result }}" != "success" ]; then
+            echo "Fixture matrix failed or was cancelled."
+            exit 1
+          fi
+          echo "Fixture matrix passed."

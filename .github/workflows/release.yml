@@ -18,6 +18,10 @@ on:
         description: 'npm package name for smoke test'
         type: string
         required: true
+      package-directory:
+        description: 'Directory containing package.json to publish'
+        type: string
+        default: '.'
       smoke-test-command:
         description: 'Custom smoke test command (empty = default npx check)'
         type: string
@@ -41,10 +45,13 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     if: ${{ inputs.npm-publish }}
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.package-directory }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -52,6 +59,10 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
+          cache-dependency-path: |
+            ${{ inputs.package-directory }}/package-lock.json
+            ${{ inputs.package-directory }}/pnpm-lock.yaml
+            ${{ inputs.package-directory }}/yarn.lock
           registry-url: https://registry.npmjs.org
 
       - name: Enable corepack
@@ -59,23 +70,34 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
+        shell: bash
         run: |
           if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
             pnpm install --frozen-lockfile
           elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
             yarn install --frozen-lockfile
           else
-            npm ci
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install --no-audit --no-fund
+            fi
           fi
 
-      - name: Build
+      - name: Build if script exists
+        shell: bash
         run: |
-          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
-            pnpm run build
-          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
-            yarn build
+          HAS_BUILD=$(node -e "const s=require('./package.json').scripts||{}; console.log(!!s.build)")
+          if [ "$HAS_BUILD" = "true" ]; then
+            if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+              pnpm run build
+            elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+              yarn build
+            else
+              npm run build
+            fi
           else
-            npm run build
+            echo "No build script found; skipping build step."
           fi
 
       - run: npm publish --access public
@@ -115,7 +137,7 @@ jobs:
         run: |
           VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
           PACKAGE="${{ inputs.package-name }}"
-          for i in $(seq 1 12); do
+          for i in $(seq 1 18); do
             npm view ${PACKAGE}@$VERSION version && break || sleep 10
           done
 
