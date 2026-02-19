@@ -1,16 +1,23 @@
 # Quality Gates
 
-The reusable quality gate workflow is:
+Quality gates are reusable, opt-in checks layered on top of baseline CI.
+
+Source workflow:
 
 - [`.github/workflows/quality-gates.yml`](../.github/workflows/quality-gates.yml)
 
-All gates are opt-in and disabled by default.
+## Adoption strategy
 
-## Enable gates
+Use a staged rollout:
 
-Call `quality-gates.yml` directly from your caller workflow and map `.citemplate.yml` (or explicit booleans) to its inputs.
+1. get baseline CI green
+2. enable `dependency-review` and `sbom`
+3. enable `codeql`
+4. enable `slsa-provenance` and `ossf-scorecard`
 
-Example:
+This avoids overwhelming first-time adopters.
+
+## Example caller job
 
 ```yaml
 jobs:
@@ -24,7 +31,7 @@ jobs:
       ossf-scorecard: false
 ```
 
-Policy values can still live in `.citemplate.yml`:
+## Policy mapping example
 
 ```yaml
 checks:
@@ -44,66 +51,67 @@ checks:
 - `slsa-provenance`
 - `ossf-scorecard`
 
-## Required permissions
+## Caller permissions
 
-When gates are enabled, caller repos may need:
+Common required permissions:
 
 - `contents: read`
-- `pull-requests: write` (dependency review comments)
-- `security-events: write` (CodeQL/Scorecard SARIF upload)
-- `id-token: write` and `attestations: write` (SLSA provenance)
+- `pull-requests: write`
+- `security-events: write`
+- `id-token: write`
+- `attestations: write`
 
-## Gate reference
+Minimal set depends on which gates are enabled.
+
+## Gate behavior reference
 
 ### CodeQL
 
 Purpose: static code security analysis.
 
-Common failure: autobuild fails.
+Common failure: autobuild cannot infer project build.
 
-Remediation: add explicit build steps before/around CodeQL in the caller workflow.
+Remediation: add explicit setup/build commands before CodeQL.
 
 ### Dependency Review
 
-Purpose: detect risky dependency changes on PRs.
+Purpose: detect risky dependency changes on pull requests.
 
-Execution rule: runs only in `pull_request` context. On push/release/dispatch it is skipped with reason.
+Execution rule: runs only in `pull_request` context.
 
-Common failure: denied package/license policy.
-
-Remediation: inspect PR dependency diff and adjust dependency policy/allowlist.
+Remediation on failure: review diff, license/policy impact, and allowlist decisions.
 
 ### SBOM
 
-Purpose: generate SPDX JSON SBOM artifact.
+Purpose: produce SPDX JSON SBOM artifact.
 
-Common failure: repository content resolution/generation error.
+Common failure: content read/generation issue.
 
-Remediation: ensure workflow can read repository contents and rerun.
+Remediation: verify repository read access and rerun.
 
 ### SLSA Provenance
 
 Purpose: generate build provenance attestation.
 
-Common failure: missing `id-token` or `attestations` permission.
+Common failure: missing OIDC/attestation permissions.
 
-Remediation: grant required permissions in caller workflow.
+Remediation: grant `id-token: write` and `attestations: write`.
 
 ### OSSF Scorecard
 
-Purpose: repository supply-chain posture scan.
+Purpose: supply-chain posture scan with SARIF output.
 
-Common failure: SARIF upload or permission error.
+Common failure: SARIF upload or permission mismatch.
 
-Remediation: ensure `security-events: write` and repository accessibility.
+Remediation: ensure `security-events: write` and compatible repository access.
 
-## Summary outputs
+## Reading gate summaries
 
-Each run writes a job summary table with:
+Each run includes summary rows for:
 
-- gate enabled state
-- whether it executed
-- status (`success|failure|skipped`)
+- enabled state
+- executed state
+- status (`success`, `failure`, `skipped`)
 - skip/failure reason
 
-This makes non-PR skips and policy-driven behavior explicit.
+Use this to distinguish policy-intentional skips from real regressions.

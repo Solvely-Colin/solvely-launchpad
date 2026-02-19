@@ -1,6 +1,8 @@
 # Reliability Dashboard
 
-Track these metrics from [`self-test-matrix`](../.github/workflows/self-test-matrix.yml):
+Reliability is measured from [`self-test-matrix`](../.github/workflows/self-test-matrix.yml).
+
+## Core metrics
 
 - fixture pass rate
 - median runtime per fixture
@@ -14,12 +16,12 @@ Recommended SLOs:
 
 ## Launch gate (beta)
 
-Use this gate before broad promotion:
+Require both:
 
-- rolling 7-day self-test matrix pass rate >= 95%
-- no unresolved regression in core fixture presets (node-lib, nextjs, turbo)
+- rolling 7-day self-test pass rate >= 95%
+- no unresolved regression in core fixtures (`node-lib`, `nextjs`, `turbo`)
 
-## Weekly reporting process
+## Weekly collection process
 
 Run:
 
@@ -27,11 +29,22 @@ Run:
 ./tooling/metrics/update-weekly.sh 2026-02-16
 ```
 
-1. Open the latest 7 runs of `Self Test Matrix`.
-2. Record pass/fail count and median runtime per fixture.
-3. Log flaky failures (rerun passes without code change).
-4. Add a weekly entry to this table.
+Then:
+
+1. inspect latest 7 runs of self-test matrix
+2. record pass/fail counts and runtimes
+3. flag flaky failures (rerun passes with no code change)
+4. append weekly record
+
+## Weekly table
 
 | Week (UTC) | Runs | Pass Rate | Median Runtime | Flaky Incidents | Notes |
 |---|---:|---:|---:|---:|---|
 | 2026-02-16 | 100 | 100.00% | 0.37 min | 0 | Baseline populated from workflow data on 2026-02-18 |
+
+## Response policy for regressions
+
+- open issue for failing fixture family
+- classify severity and blast radius
+- patch same day for high-impact setup regressions
+- update docs or preset defaults when root cause is onboarding friction
