@@ -5,12 +5,12 @@ checks:
   license:
     deny: [GPL-2.0, GPL-3.0]
   security:
-    audit_level: critical
+    audit_level: low
     dependency_review: true
-    codeql: false
+    codeql: true
     sbom: true
-    slsa_provenance: false
-    ossf_scorecard: false
+    slsa_provenance: true
+    ossf_scorecard: true
 pr_feedback:
   enabled: true
   mode: aggregated

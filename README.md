@@ -1,6 +1,7 @@
 # Solvely Launchpad
 
 [![Repository CI](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml)
+[![Dogfood Quality Gates](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/dogfood-quality-gates.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/dogfood-quality-gates.yml)
 [![npm version](https://img.shields.io/npm/v/solvely-launchpad)](https://www.npmjs.com/package/solvely-launchpad)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 

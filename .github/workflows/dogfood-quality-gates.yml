@@ -26,6 +26,6 @@ jobs:
     with:
       dependency-review: true
       sbom: true
-      codeql: false
-      slsa-provenance: false
-      ossf-scorecard: false
+      codeql: true
+      slsa-provenance: true
+      ossf-scorecard: true
