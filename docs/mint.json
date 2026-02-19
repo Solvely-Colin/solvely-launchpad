@@ -1,0 +1,59 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Solvely Launchpad",
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0A7A5A",
+    "light": "#2BAA85",
+    "dark": "#06523D"
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/index",
+      "destination": "/quickstart"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "index",
+        "quickstart",
+        "troubleshooting"
+      ]
+    },
+    {
+      "group": "Operations",
+      "pages": [
+        "quality-gates",
+        "governance",
+        "reliability",
+        "adoption"
+      ]
+    },
+    {
+      "group": "Presets",
+      "pages": [
+        "presets/node-lib",
+        "presets/nextjs",
+        "presets/turbo",
+        "presets/bun",
+        "presets/pnpm-monorepo",
+        "presets/python",
+        "presets/go",
+        "presets/rust"
+      ]
+    },
+    {
+      "group": "Policy",
+      "pages": [
+        "migrations/v1",
+        "policy/deprecations"
+      ]
+    }
+  ]
+}
