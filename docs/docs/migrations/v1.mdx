@@ -1,0 +1,16 @@
+# Migration Guide: v1
+
+## Semver contract
+
+- `v1.x` introduces additive features and non-breaking defaults.
+- Breaking changes are reserved for `v2`.
+
+## Recommended migration
+
+1. Replace `@main` with `@v1` in reusable workflow references.
+2. Add `.citemplate.yml` with `version: 1` and your selected preset.
+3. Run:
+
+```bash
+npx solvely-launchpad migrate --from v1 --to v1.x
+```
