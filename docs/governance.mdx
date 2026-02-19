@@ -1,63 +1,77 @@
 # Governance Checklist
 
-Some governance controls are repository settings (not code), so they must be configured in GitHub.
+Governance mixes repository settings, process contracts, and issue operations.
 
 ## Beta support policy
 
-- Support channel: GitHub Issues
-- Scope: Launchpad beta features and onboarding flows
-- Response expectation: best effort within 72 hours
-- Escalation: issues tagged `setup-blocker` should be handled before new outbound pushes
+- support channel: GitHub Issues
+- scope: Launchpad onboarding, reusable workflow integration, and preset fit
+- response target: best effort within 72 hours
+- escalation: prioritize `setup-blocker` before additional outreach
 
-## Triage labels
+## Issue triage model
 
-Create and use these labels consistently:
+Required labels:
 
-- `setup-blocker`: install/bootstrap path fails for a consumer repo
-- `preset-gap`: preset does not fit real project shape or defaults
-- `docs-gap`: docs missing, misleading, or unclear
-- `quality-gate`: CodeQL/dependency review/SBOM/SLSA/Scorecard integration issues
+- `setup-blocker`
+- `preset-gap`
+- `docs-gap`
+- `quality-gate`
 
-Canonical label definitions are stored in:
+Label definitions source:
 
 - [`.github/labels.yml`](../.github/labels.yml)
 
-## Branch protection for `main`
+## Branch protection baseline (`main`)
 
-Configure branch protection to require at least:
+Required checks should include:
 
-- `Self Test Matrix / fixtures`
-- primary CI check from your caller workflow
+- self-test fixtures/matrix
+- primary caller CI check
 
 Recommended settings:
 
 - require pull request before merge
 - require status checks to pass
-- restrict direct pushes to `main`
+- block direct pushes to `main`
 
-## Secrets
+## Secrets and credentials
 
-Required for automatic npm publish on release:
+For npm release publishing:
 
-- `NPM_TOKEN` (repository secret)
+- set `NPM_TOKEN` repository secret
 
-## Release flow
+For quality gates requiring attestations/security uploads:
 
-- create GitHub release (`vX.Y.Z`)
-- `publish-launchpad.yml` preflight validates `NPM_TOKEN`
-- reusable release workflow publishes to npm and generates notes
+- ensure caller workflow permissions include required scopes
 
-## Setup workflow behavior in non-owner repos
+## Release governance
 
-For forks and protected branches:
+Release flow:
 
-- ensure `contents: write` and `pull-requests: write` are granted to `GITHUB_TOKEN`
-- ensure bot pushes to setup branch are permitted
-- if direct push is blocked by org policy, run setup locally with CLI and open PR manually
+1. create tagged release (`vX.Y.Z`)
+2. preflight validates required secrets
+3. reusable publish executes
+4. release notes and artifacts are available
 
-## Launch reliability gate
+## External repo setup constraints
 
-Before broad promotion, require:
+For forks and org-protected repos:
 
-- self-test matrix pass rate >= 95% over rolling 7 days
+- grant `contents: write` and `pull-requests: write` where setup PR is expected
+- allow bot branch creation
+- if not allowed, run CLI locally and open a manual PR
+
+## Reliability gate before broad launch
+
+Before broad promotion:
+
+- rolling 7-day fixture pass rate >= 95%
 - no unresolved `setup-blocker` older than 72 hours
+
+## Weekly ops checklist
+
+- review open blockers and stale issues
+- update reliability/adoption metrics
+- decide outreach volume based on support load
+- publish one short weekly status note

@@ -1,30 +1,42 @@
 # Quickstart
 
-## CLI (recommended)
+This guide is optimized for one goal: first green CI in one PR cycle.
+
+## Prerequisites
+
+- GitHub repository with Actions enabled
+- Permission to open PRs in the target repository
+- Node.js available locally for CLI bootstrap path
+
+## Fast path (CLI)
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes
 ```
 
-For non-package repos, skip release workflow generation:
+This generates a caller workflow pinned to `@v1` and baseline policy files.
+
+For non-package repos, skip release generation:
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes --app true
 ```
 
-Strict commitlint mode (optional):
+Enable strict commitlint from day one (optional):
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
 ```
 
-Default behavior is `strict: false` so commitlint warns without blocking CI.
+Default behavior is non-blocking commitlint (`strict: false`).
 
-## GitHub-only setup
+## Fast path (GitHub-only setup)
 
-Use the `Setup Solvely Launchpad` workflow (`workflow_dispatch`) to open a setup PR.
+Use the `Setup Solvely Launchpad` workflow (`workflow_dispatch`) if you want a setup PR without local CLI execution.
 
-## Minimum caller workflow contract
+## Minimum caller contract
+
+Your caller workflow should include this baseline:
 
 ```yaml
 name: CI
@@ -46,33 +58,76 @@ jobs:
     uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 ```
 
-When needed, set `with.install-command` to override install auto-detection (for example, nested workspaces or smoke callers).
-
-If you want security gates, call `quality-gates.yml` as a separate job in the same caller workflow.
-
 ## First green CI in one PR cycle
 
-Use this default path for fastest onboarding:
+1. Run init with the closest preset.
+2. Open PR with generated files.
+3. If install/bootstrap fails, set `with.install-command` explicitly.
+4. If optional gates fail, disable only the failing optional input temporarily, then re-enable after baseline stabilizes.
 
-1. `npx solvely-launchpad init --preset <preset> --yes`
-2. Open PR with generated workflow files.
-3. If install fails, set `with.install-command` explicitly in caller workflow.
-4. If optional checks fail during migration, temporarily disable the specific check input and re-enable after baseline is stable.
+### Typical install-command overrides
 
-For repos without `package.json`, Launchpad skips release workflow generation automatically and prints a note explaining why.
+```yaml
+jobs:
+  ci:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
+    with:
+      install-command: pnpm install --frozen-lockfile
+```
 
-## Auto deploy to npm on release
+```yaml
+jobs:
+  ci:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
+    with:
+      install-command: npm ci --workspaces
+```
 
-This repository includes [`.github/workflows/publish-launchpad.yml`](../.github/workflows/publish-launchpad.yml).
+## Add quality gates after baseline is green
 
-Flow:
+Call `quality-gates.yml` as a separate job in the same caller workflow.
 
-1. Ensure `NPM_TOKEN` is set in repository secrets.
-2. Create a GitHub release (for example `v0.1.1`).
-3. `Publish Launchpad` runs preflight and invokes reusable release publish.
-4. npm package `solvely-launchpad` is published automatically.
+```yaml
+jobs:
+  ci:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/ci.yml@v1
 
-## Policy-as-code
+  quality-gates:
+    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
+    with:
+      dependency-review: true
+      sbom: true
+      codeql: false
+      slsa-provenance: false
+      ossf-scorecard: false
+```
+
+## Validate local config health
+
+Run doctor from repository root:
+
+```bash
+npx solvely-launchpad doctor
+```
+
+Doctor warns on:
+
+- missing caller permissions baseline
+- reusable workflow refs on `@main` instead of `@v1`
+- policy/gate wiring mismatches
+
+## Release publish flow (for package repos)
+
+This repository uses [`.github/workflows/publish-launchpad.yml`](../.github/workflows/publish-launchpad.yml).
+
+Release steps:
+
+1. Set `NPM_TOKEN` in repository secrets.
+2. Create a GitHub release (example: `v0.1.1`).
+3. Publish workflow runs preflight and reusable release publish.
+4. Package is published to npm.
+
+## Policy file baseline
 
 Create `.citemplate.yml`:
 
@@ -82,3 +137,5 @@ preset: node-lib
 checks:
   required: [ci, test]
 ```
+
+Then iterate from baseline instead of turning on every optional gate at once.

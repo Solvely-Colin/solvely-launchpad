@@ -1,60 +1,122 @@
 # Troubleshooting
 
-## Setup workflow did not open PR
+Use this page to recover quickly from first-run friction and keep rollout momentum.
 
-- Confirm workflow permissions include `contents: write` and `pull-requests: write`.
-- Confirm branch protection allows GitHub Actions bot push.
+## Setup workflow did not open a PR
+
+Check:
+
+- repository Actions permissions include `contents: write` and `pull-requests: write`
+- branch policies allow bot branch push and PR creation
+- setup workflow run logs for token/permission errors
 
 ## First CI run failed during install
 
-- If your repo layout needs custom bootstrap, set `with.install-command` in caller workflow.
-- If your repository has no root lockfile, keep `install-command` explicit for deterministic setup.
+Symptoms:
+
+- install step fails despite valid lockfile
+- monorepo workspace resolution fails
+- no root lockfile in app/service repo
+
+Fix:
+
+- set `with.install-command` explicitly in caller workflow
+- choose deterministic command (`npm ci`, `pnpm install --frozen-lockfile`, etc.)
 
 ## Release workflow was not generated
 
-- Expected for non-package repos (no `package.json`).
-- Also expected when init is run with `--app true` or `--no-release true`.
+Expected when:
+
+- repository has no `package.json`
+- init used `--app true` or `--no-release true`
+
+If release is required, rerun init for a package repo shape or add release workflow manually.
 
 ## Policy check failed
 
-- Ensure `.citemplate.yml` has `version` and `preset`.
-- Ensure `checks.security.audit_level` is one of `critical|high|moderate|low`.
+Common issues:
 
-## No preset auto-detected
+- missing `version` or `preset`
+- invalid `checks.security.audit_level`
 
-- CLI falls back to `node-lib`.
-- Specify explicitly: `--preset <preset-id>`.
+Valid `audit_level` values:
 
-## Commitlint is failing in strict mode
+- `critical`
+- `high`
+- `moderate`
+- `low`
 
-- Use Conventional Commits (`feat:`, `fix:`, `chore:`).
-- If you are onboarding an existing repo, set `strict: false` first.
-- Later switch to strict mode after the team normalizes commit messages.
+## Preset auto-detection chose wrong target
 
-## Commitlint warns but CI stays green
+CLI falls back to `node-lib` when uncertain.
 
-- This is expected default behavior (`strict: false`).
-- Enable blocking mode via `--commitlint-strict true` during init or set `strict: true` in `.github/workflows/commitlint.yml`.
+Use explicit preset to avoid mismatch:
+
+```bash
+npx solvely-launchpad init --preset <preset-id> --yes
+```
+
+## Commitlint behavior is not what you expected
+
+Strict failures:
+
+- enable Conventional Commits (`feat:`, `fix:`, `chore:`)
+- if migrating legacy repo, start with non-strict and move to strict later
+
+Warnings without failing CI:
+
+- this is default mode (`strict: false`)
+- switch by setting `--commitlint-strict true` at init time
 
 ## Dependency review did not run
 
-- Expected on non-PR events (`push`, `release`, `workflow_dispatch`).
-- This gate executes only in `pull_request` context.
-- Check quality-gates summary for explicit skip reason.
+This is expected outside `pull_request` context.
+
+- `push`, `release`, and `workflow_dispatch` runs will skip dependency review
+- check quality-gates summary for explicit skip reason
 
 ## SLSA provenance failed
 
-- Ensure the caller workflow permissions include:
-  - `id-token: write`
-  - `attestations: write`
-- Re-run after permission update.
+Ensure caller workflow has:
+
+- `id-token: write`
+- `attestations: write`
+
+Then rerun.
 
 ## CodeQL failed during autobuild
 
-- Add explicit build commands for your stack before CodeQL analyze.
-- Confirm project dependencies are installable in CI.
+Fix pattern:
+
+1. add explicit build/setup before analysis
+2. ensure dependencies install in CI
+3. rerun after build command is stable
 
 ## Scorecard SARIF upload failed
 
-- Ensure `security-events: write` permission is granted.
-- Confirm repository visibility/access is compatible with Scorecard execution.
+Check:
+
+- `security-events: write` permission in caller workflow
+- repository visibility/access compatibility for scan
+
+## Doctor reports warnings
+
+Run:
+
+```bash
+npx solvely-launchpad doctor
+```
+
+Interpretation:
+
+- warnings are actionable drift indicators
+- baseline missing files can be hard failures
+- fix warnings before broad rollout to reduce support load
+
+## Escalation path
+
+If a blocker persists after these fixes:
+
+1. open issue with label `setup-blocker`
+2. include caller workflow, error excerpt, and repo shape
+3. include whether failure is CLI path or workflow-dispatch path
