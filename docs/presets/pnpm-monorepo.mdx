@@ -1,6 +1,20 @@
 # Preset: pnpm-monorepo
 
-Includes:
-- CI
-- Scheduled maintenance
-- Commitlint
+Best for pnpm workspace monorepos.
+
+## Generated workflows
+
+- `ci.yml`
+- `scheduled.yml`
+- `commitlint.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset pnpm-monorepo --yes
+```
+
+## Notes
+
+- If install auto-detection is not correct for your workspace, set `with.install-command` explicitly.
+- Useful first override example: `pnpm install --frozen-lockfile`.

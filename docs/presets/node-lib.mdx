@@ -1,8 +1,29 @@
 # Preset: node-lib
 
-Includes:
-- CI
-- Coverage
-- Release
-- Scheduled maintenance
-- Commitlint
+Best for publishable Node.js libraries.
+
+## Generated workflows
+
+- `ci.yml`
+- `coverage.yml`
+- `release.yml` (only when `package.json` exists and release is not disabled)
+- `scheduled.yml`
+- `commitlint.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes
+```
+
+For non-package repos, use:
+
+```bash
+npx solvely-launchpad init --preset node-lib --yes --app true
+```
+
+## Notes
+
+- Caller workflow stays pinned to `@v1`.
+- Default commitlint mode is non-blocking (`strict: false`).
+- Set `--commitlint-strict true` to block non-conventional commits.
