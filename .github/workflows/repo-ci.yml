@@ -23,5 +23,5 @@ jobs:
       - name: Validate CLI entry and docs links
         run: |
           test -f cli/bin/launchpad.js
-          test -f docs/quickstart.md
+          test -f docs/quickstart.mdx
           node cli/bin/launchpad.js preview --preset node-lib --yes >/dev/null
