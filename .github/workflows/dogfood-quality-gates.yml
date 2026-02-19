@@ -22,7 +22,7 @@ concurrency:
 jobs:
   quality-gates:
     name: quality-gates
-    uses: Solvely-Colin/solvely-launchpad/.github/workflows/quality-gates.yml@v1
+    uses: ./.github/workflows/quality-gates.yml
     with:
       dependency-review: true
       sbom: true
