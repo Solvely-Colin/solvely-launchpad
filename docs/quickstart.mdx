@@ -50,7 +50,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${GIT_REF}
   cancel-in-progress: true
 
 jobs:
