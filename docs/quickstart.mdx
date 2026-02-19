@@ -19,6 +19,12 @@ This guide is optimized for one goal: first green CI in one PR cycle.
 npx solvely-launchpad init --preset node-lib --yes
 ```
 
+For large/high-traffic OSS repos, start with adoption profile defaults:
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile baseline --yes
+```
+
 This generates a caller workflow pinned to `@v1` and baseline policy files.
 
 For non-package repos, skip release generation:
@@ -34,6 +40,18 @@ npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
 ```
 
 Default behavior is non-blocking commitlint (`strict: false`).
+
+## Rollout profiles
+
+Use profile-driven rollout to avoid over-hardening on day 1:
+
+- `baseline`: low-friction first install
+- `strict`: stronger defaults after baseline stabilizes
+- `hardened`: security-heavy posture for mature repos
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile strict --yes
+```
 
 ## Fast path (GitHub-only setup)
 

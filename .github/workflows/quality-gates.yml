@@ -157,7 +157,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Create source bundle
-        run: tar -czf source.tgz .
+        run: git archive --format=tar.gz --output=source.tgz HEAD
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
@@ -166,7 +166,7 @@ jobs:
 
       - name: Remediation hint
         if: failure()
-        run: echo "::error::SLSA provenance failed. Ensure id-token and attestations permissions are granted."
+        run: echo "::error::SLSA provenance failed. Ensure id-token + attestations permissions and repository archive generation are available."
 
   ossf-scorecard:
     if: ${{ inputs['ossf-scorecard'] }}

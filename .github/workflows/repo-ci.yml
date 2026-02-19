@@ -25,3 +25,10 @@ jobs:
           test -f cli/bin/launchpad.js
           test -f docs/quickstart.mdx
           node cli/bin/launchpad.js preview --preset node-lib --yes >/dev/null
+      - name: Validate profile generation paths
+        run: |
+          node cli/bin/launchpad.js preview --preset node-lib --profile baseline --yes >/dev/null
+          node cli/bin/launchpad.js preview --preset node-lib --profile strict --yes >/dev/null
+          node cli/bin/launchpad.js preview --preset node-lib --profile hardened --yes >/dev/null
+      - name: Run CLI self-test
+        run: node cli/src/self-test.js

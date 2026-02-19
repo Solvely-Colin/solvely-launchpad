@@ -1,6 +1,7 @@
 # Solvely Launchpad
 
 [![Repository CI](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/repo-ci.yml)
+[![Dogfood Quality Gates](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/dogfood-quality-gates.yml/badge.svg)](https://github.com/Solvely-Colin/solvely-launchpad/actions/workflows/dogfood-quality-gates.yml)
 [![npm version](https://img.shields.io/npm/v/solvely-launchpad)](https://www.npmjs.com/package/solvely-launchpad)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
@@ -33,6 +34,12 @@ Single install CTA:
 
 ```bash
 npx solvely-launchpad init --preset <preset> --yes
+```
+
+Adoption-first install for larger OSS repos (lower friction defaults):
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile baseline --yes
 ```
 
 ## Why Launchpad
@@ -75,6 +82,18 @@ Strict mode during init:
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+```
+
+Profiles (for rollout by repo maturity):
+
+- `baseline`: faster first-run adoption, lighter default checks
+- `strict`: stronger defaults for ongoing CI confidence
+- `hardened`: security-heavy posture (CodeQL/SBOM/SLSA/Scorecard enabled)
+
+Example:
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile strict --yes
 ```
 
 Skip release workflow for non-package repos:
