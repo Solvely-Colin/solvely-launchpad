@@ -73,6 +73,8 @@ function main() {
   );
 
   const policy = fs.readFileSync(path.join(tmp, '.citemplate.yml'), 'utf8');
+  assert(policy.includes('pr_feedback:'), 'generated policy missing pr_feedback section');
+  assert(policy.includes('audit_level: critical'), 'baseline profile should default to audit_level: critical');
   fs.writeFileSync(
     path.join(tmp, '.citemplate.yml'),
     policy.replace('dependency_review: false', 'dependency_review: true'),
@@ -92,6 +94,20 @@ function main() {
     res.stdout.includes('Note: skipping release workflow (no package.json detected).'),
     `preview missing non-package release note:\n${res.stdout}`
   );
+
+  const tmpHardened = makeTempDir();
+  writeJson(path.join(tmpHardened, 'package.json'), {
+    name: 'self-test-repo-hardened',
+    private: true,
+    version: '1.0.0',
+    scripts: { test: 'echo ok' }
+  });
+  res = runCli(['init', '--preset', 'node-lib', '--profile', 'hardened', '--yes'], tmpHardened);
+  assert(res.status === 0, `hardened init failed:\n${res.stdout}\n${res.stderr}`);
+  const hardenedCi = fs.readFileSync(path.join(tmpHardened, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert(hardenedCi.includes('gate-codeql: true'), 'hardened profile should enable gate-codeql');
+  const hardenedPolicy = fs.readFileSync(path.join(tmpHardened, '.citemplate.yml'), 'utf8');
+  assert(hardenedPolicy.includes('codeql: true'), 'hardened profile should set codeql: true in policy');
 
   console.log('CLI self-test passed.');
 }

@@ -367,6 +367,7 @@ jobs:
       gate-sbom: ${{ steps.policy.outputs['gate-sbom'] }}
       gate-slsa-provenance: ${{ steps.policy.outputs['gate-slsa-provenance'] }}
       gate-ossf-scorecard: ${{ steps.policy.outputs['gate-ossf-scorecard'] }}
+      pr-feedback-enabled: ${{ steps.policy.outputs['pr-feedback-enabled'] }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Validate .citemplate.yml
@@ -403,6 +404,7 @@ jobs:
           POLICY_GATE_SBOM="false"
           POLICY_GATE_SLSA_PROVENANCE="false"
           POLICY_GATE_OSSF_SCORECARD="false"
+          POLICY_PR_FEEDBACK_ENABLED="true"
 
           if [ ! -f ".citemplate.yml" ]; then
             echo "No .citemplate.yml found; skipping policy enforcement."
@@ -448,6 +450,9 @@ jobs:
             POLICY_GATE_SBOM=$(get_bool_value sbom)
             POLICY_GATE_SLSA_PROVENANCE=$(get_bool_value slsa_provenance)
             POLICY_GATE_OSSF_SCORECARD=$(get_bool_value ossf_scorecard)
+            if awk '/^pr_feedback:/{flag=1;next}/^[^[:space:]]/{flag=0}flag' .citemplate.yml | grep -Eq '^[[:space:]]*enabled:[[:space:]]*(true|false)[[:space:]]*$'; then
+              POLICY_PR_FEEDBACK_ENABLED=$(awk '/^pr_feedback:/{flag=1;next}/^[^[:space:]]/{flag=0}flag' .citemplate.yml | grep -E '^[[:space:]]*enabled:[[:space:]]*(true|false)[[:space:]]*$' | head -n1 | awk -F':' '{print $2}' | xargs)
+            fi
 
             echo "Policy validation complete."
           fi
@@ -464,6 +469,7 @@ jobs:
             echo "gate-sbom=$GATE_SBOM"
             echo "gate-slsa-provenance=$GATE_SLSA_PROVENANCE"
             echo "gate-ossf-scorecard=$GATE_OSSF_SCORECARD"
+            echo "pr-feedback-enabled=$POLICY_PR_FEEDBACK_ENABLED"
           } >> "$GITHUB_OUTPUT"
 
           echo "## Policy Security Gate Decisions" >> "$GITHUB_STEP_SUMMARY"
@@ -474,6 +480,7 @@ jobs:
           echo "| SBOM | $GATE_SBOM |" >> "$GITHUB_STEP_SUMMARY"
           echo "| SLSA provenance | $GATE_SLSA_PROVENANCE |" >> "$GITHUB_STEP_SUMMARY"
           echo "| OSSF Scorecard | $GATE_OSSF_SCORECARD |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PR feedback comment | $POLICY_PR_FEEDBACK_ENABLED |" >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     name: Lint
@@ -668,7 +675,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [detect, policy, lint, format, typecheck, build, test, security-audit, license-check, bundle-size]
-    if: ${{ always() && github.event_name == 'pull_request' }}
+    if: ${{ always() && github.event_name == 'pull_request' && needs.policy.outputs['pr-feedback-enabled'] == 'true' }}
     steps:
       - name: Publish aggregated PR comment
         continue-on-error: true

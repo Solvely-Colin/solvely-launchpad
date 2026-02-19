@@ -35,6 +35,12 @@ Single install CTA:
 npx solvely-launchpad init --preset <preset> --yes
 ```
 
+Adoption-first install for larger OSS repos (lower friction defaults):
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile baseline --yes
+```
+
 ## Why Launchpad
 
 - Stable reusable workflow contract at `@v1`
@@ -75,6 +81,18 @@ Strict mode during init:
 
 ```bash
 npx solvely-launchpad init --preset node-lib --yes --commitlint-strict true
+```
+
+Profiles (for rollout by repo maturity):
+
+- `baseline`: faster first-run adoption, lighter default checks
+- `strict`: stronger defaults for ongoing CI confidence
+- `hardened`: security-heavy posture (CodeQL/SBOM/SLSA/Scorecard enabled)
+
+Example:
+
+```bash
+npx solvely-launchpad init --preset node-lib --profile strict --yes
 ```
 
 Skip release workflow for non-package repos:
