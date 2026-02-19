@@ -10,15 +10,11 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/docs/quickstart"
+      "destination": "/quickstart"
     },
     {
       "source": "/index",
-      "destination": "/docs/quickstart"
-    },
-    {
-      "source": "/quickstart",
-      "destination": "/docs/quickstart"
+      "destination": "/quickstart"
     }
   ],
   "navigation": [
