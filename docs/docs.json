@@ -1,5 +1,6 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
   "name": "Solvely Launchpad",
   "favicon": "/favicon.svg",
   "colors": {
@@ -25,43 +26,45 @@
       "destination": "/quickstart"
     }
   ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "index",
-        "quickstart",
-        "troubleshooting"
-      ]
-    },
-    {
-      "group": "Operations",
-      "pages": [
-        "quality-gates",
-        "governance",
-        "reliability",
-        "adoption"
-      ]
-    },
-    {
-      "group": "Presets",
-      "pages": [
-        "presets/node-lib",
-        "presets/nextjs",
-        "presets/turbo",
-        "presets/bun",
-        "presets/pnpm-monorepo",
-        "presets/python",
-        "presets/go",
-        "presets/rust"
-      ]
-    },
-    {
-      "group": "Policy",
-      "pages": [
-        "migrations/v1",
-        "policy/deprecations"
-      ]
-    }
-  ]
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "index",
+          "quickstart",
+          "troubleshooting"
+        ]
+      },
+      {
+        "group": "Operations",
+        "pages": [
+          "quality-gates",
+          "governance",
+          "reliability",
+          "adoption"
+        ]
+      },
+      {
+        "group": "Presets",
+        "pages": [
+          "presets/node-lib",
+          "presets/nextjs",
+          "presets/turbo",
+          "presets/bun",
+          "presets/pnpm-monorepo",
+          "presets/python",
+          "presets/go",
+          "presets/rust"
+        ]
+      },
+      {
+        "group": "Policy",
+        "pages": [
+          "migrations/v1",
+          "policy/deprecations"
+        ]
+      }
+    ]
+  }
 }
