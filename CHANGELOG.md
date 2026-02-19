@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.1.7
+
+- Add rollout profiles (`baseline`, `strict`, `hardened`) to CLI generation.
+- Make generated policy defaults profile-driven for progressive hardening.
+- Gate aggregated PR feedback comment with `pr_feedback.enabled`.
+- Harden dogfood quality gates to run CodeQL, SBOM, SLSA provenance, and OSSF Scorecard.
+- Fix SLSA source bundle creation by switching from `tar` workspace sweep to `git archive`.
+
+## 0.1.6
+
+- Stabilize npm publish + smoke flow and keep `v1` channel sync automation active on stable releases.
+
 ## 0.1.5
 
 - Validate release automation after npm token + publish workflow stabilization.
