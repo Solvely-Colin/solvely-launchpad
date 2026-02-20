@@ -49,6 +49,7 @@ jobs:
     if: ${{ inputs.npm-publish }}
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -99,7 +100,7 @@ jobs:
         shell: bash
         run: |
           cd "${{ inputs.package-directory }}"
-          npm publish --access public
+          npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
 
