@@ -1,6 +1,28 @@
+---
+title: Deprecation Policy
+description: Versioning and deprecation timelines for Launchpad contracts.
+---
+
 # Deprecation Policy
 
-- Deprecations are announced in release notes and docs.
-- Every deprecation has at least two minor releases of overlap before removal.
-- v1 schema remains compatible for all `v1.x` releases.
-- Unknown `.citemplate.yml` keys produce warnings, not hard failures, in `v1.x`.
+Deprecations are managed to keep adopter migration predictable.
+
+## Rules
+
+- deprecations are announced in release notes and docs
+- each deprecation keeps at least two minor releases of overlap before removal
+- `v1` schema remains compatible across all `v1.x` releases
+- unknown `.citemplate.yml` keys warn in `v1.x` (no hard failure)
+
+## Deprecation lifecycle
+
+1. announce deprecation and preferred replacement
+2. keep legacy behavior active through overlap window
+3. provide migration guidance and examples
+4. remove in next major or after explicit policy window
+
+## Consumer guidance
+
+- pin reusable workflows to `@v1`
+- run `doctor` during upgrades
+- treat warnings as migration backlog, not ignorable noise

@@ -1,5 +1,23 @@
+---
+title: Preset: rust
+description: Setup guidance for Rust repositories.
+---
+
 # Preset: rust
 
-Includes:
-- CI baseline
-- Scheduled maintenance
+Best for Rust crates and services.
+
+## Generated workflows
+
+- `ci.yml`
+- `scheduled.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset rust --yes
+```
+
+## Notes
+
+- Add security/quality gates incrementally to avoid noisy first-run adoption.

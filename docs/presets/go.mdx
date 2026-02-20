@@ -1,5 +1,23 @@
+---
+title: Preset: go
+description: Setup guidance for Go repositories.
+---
+
 # Preset: go
 
-Includes:
-- CI baseline
-- Scheduled maintenance
+Best for Go modules and services.
+
+## Generated workflows
+
+- `ci.yml`
+- `scheduled.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset go --yes
+```
+
+## Notes
+
+- Keep quality gates opt-in based on repository maturity and runtime budget.

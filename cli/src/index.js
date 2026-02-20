@@ -9,6 +9,62 @@ const __dirname = path.dirname(__filename);
 const PRESET_DIR = path.resolve(__dirname, '../presets/v1');
 const REPO_REF = 'Solvely-Colin/solvely-launchpad';
 const VERSION_REF = 'v1';
+const DEFAULT_PROFILE = 'baseline';
+const PROFILES = {
+  baseline: {
+    description: 'Fast adoption profile for first-run CI success.',
+    callerOverrides: {
+      'security-audit': 'false',
+      'license-check': 'false'
+    },
+    policy: {
+      audit_level: 'critical',
+      dependency_review: false,
+      codeql: false,
+      sbom: false,
+      slsa_provenance: false,
+      ossf_scorecard: false,
+      pr_feedback_enabled: true
+    }
+  },
+  strict: {
+    description: 'Balanced profile with stronger default checks.',
+    callerOverrides: {
+      'security-audit': 'true',
+      'license-check': 'true'
+    },
+    policy: {
+      audit_level: 'high',
+      dependency_review: true,
+      codeql: false,
+      sbom: true,
+      slsa_provenance: false,
+      ossf_scorecard: false,
+      pr_feedback_enabled: true
+    }
+  },
+  hardened: {
+    description: 'High-assurance profile for security-heavy repos.',
+    callerOverrides: {
+      'security-audit': 'true',
+      'license-check': 'true',
+      'gate-codeql': 'true',
+      'gate-dependency-review': 'true',
+      'gate-sbom': 'true',
+      'gate-slsa-provenance': 'true',
+      'gate-ossf-scorecard': 'true'
+    },
+    policy: {
+      audit_level: 'moderate',
+      dependency_review: true,
+      codeql: true,
+      sbom: true,
+      slsa_provenance: true,
+      ossf_scorecard: true,
+      pr_feedback_enabled: true
+    }
+  }
+};
 
 function parseArgs(argv) {
   const out = { _: [] };
@@ -59,6 +115,14 @@ function detectPreset(cwd) {
   return 'node-lib';
 }
 
+function parseProfile(value) {
+  const profile = String(value || DEFAULT_PROFILE).toLowerCase();
+  if (!PROFILES[profile]) {
+    throw new Error(`Unknown profile: ${value}. Allowed: ${Object.keys(PROFILES).join(', ')}`);
+  }
+  return profile;
+}
+
 function renderCallerWorkflow(name, workflow, pm, overrides = {}) {
   const withPairs = Object.entries(overrides);
   const withLines = [pm ? `      package-manager: ${pm}` : null, ...withPairs.map(([k, v]) => `      ${k}: ${v}`)].filter(Boolean);
@@ -89,14 +153,16 @@ function renderCommitlintCallerWorkflow(strict) {
   return `name: Commitlint\non:\n  pull_request:\n    branches: [main]\njobs:\n  commitlint:\n    uses: ${REPO_REF}/.github/workflows/commitlint.yml@${VERSION_REF}\n    with:\n      strict: ${strict ? 'true' : 'false'}\n`;
 }
 
-function renderPolicy(preset) {
-  return `version: 1\npreset: ${preset}\nchecks:\n  required: [ci, test]\n  license:\n    deny: [GPL-2.0, GPL-3.0]\n  security:\n    audit_level: critical\n    dependency_review: false\n    codeql: false\n    sbom: false\n    slsa_provenance: false\n    ossf_scorecard: false\npr_feedback:\n  enabled: true\n  mode: aggregated\n  flaky_hints: true\nbranches:\n  protected: [main]\n`;
+function renderPolicy(preset, profileName) {
+  const profile = PROFILES[profileName] || PROFILES[DEFAULT_PROFILE];
+  return `version: 1\npreset: ${preset}\nchecks:\n  required: [ci, test]\n  license:\n    deny: [GPL-2.0, GPL-3.0]\n  security:\n    audit_level: ${profile.policy.audit_level}\n    dependency_review: ${profile.policy.dependency_review}\n    codeql: ${profile.policy.codeql}\n    sbom: ${profile.policy.sbom}\n    slsa_provenance: ${profile.policy.slsa_provenance}\n    ossf_scorecard: ${profile.policy.ossf_scorecard}\npr_feedback:\n  enabled: ${profile.policy.pr_feedback_enabled}\n  mode: aggregated\n  flaky_hints: true\nbranches:\n  protected: [main]\n`;
 }
 
-function planFiles(cwd, preset, pm, writePolicy, commitlintStrict, includeRelease) {
+function planFiles(cwd, preset, pm, writePolicy, commitlintStrict, includeRelease, profileName) {
   const files = [];
   const wfDir = path.join(cwd, '.github', 'workflows');
-  const ciOverrides = preset.defaultOverrides || {};
+  const profile = PROFILES[profileName] || PROFILES[DEFAULT_PROFILE];
+  const ciOverrides = { ...(preset.defaultOverrides || {}), ...(profile.callerOverrides || {}) };
   files.push({
     path: path.join(wfDir, 'ci.yml'),
     content: renderCallerWorkflow('CI', 'ci', pm, ciOverrides)
@@ -129,7 +195,7 @@ function planFiles(cwd, preset, pm, writePolicy, commitlintStrict, includeReleas
   }
 
   if (writePolicy) {
-    files.push({ path: path.join(cwd, '.citemplate.yml'), content: renderPolicy(preset.id) });
+    files.push({ path: path.join(cwd, '.citemplate.yml'), content: renderPolicy(preset.id, profileName) });
   }
 
   const readmePath = path.join(cwd, 'README.md');
@@ -307,12 +373,15 @@ export async function run(argv) {
   if (!preset) throw new Error(`Unknown preset: ${selectedPreset}`);
 
   const pm = args['package-manager'] || detectPackageManager(cwd);
+  const profileName = parseProfile(args.profile);
   const commitlintStrict = isTrueFlag(args['commitlint-strict']);
   const releaseRequestedByPreset = preset.requiredWorkflows.includes('release');
   const releaseDisabledByFlag = isTrueFlag(args['no-release']) || isTrueFlag(args.app);
   const hasPackageJson = fs.existsSync(path.join(cwd, 'package.json'));
   const includeRelease = releaseRequestedByPreset && !releaseDisabledByFlag && hasPackageJson;
-  const files = planFiles(cwd, preset, pm, args.policy !== 'false', commitlintStrict, includeRelease);
+  const files = planFiles(cwd, preset, pm, args.policy !== 'false', commitlintStrict, includeRelease, profileName);
+
+  console.log(`Using profile: ${profileName} (${PROFILES[profileName].description})`);
 
   if (releaseRequestedByPreset && !includeRelease) {
     if (releaseDisabledByFlag) {

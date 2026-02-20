@@ -1,5 +1,23 @@
+---
+title: Preset: bun
+description: Setup guidance for Bun-based repositories.
+---
+
 # Preset: bun
 
-Includes:
-- CI
-- Scheduled maintenance
+Best for Bun-first projects.
+
+## Generated workflows
+
+- `ci.yml`
+- `scheduled.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset bun --yes
+```
+
+## Notes
+
+- Use explicit install/test commands in caller workflow when project layout is non-standard.

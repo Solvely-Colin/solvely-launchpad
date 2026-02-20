@@ -1,6 +1,25 @@
+---
+title: Preset: nextjs
+description: Setup guidance for Next.js repositories.
+---
+
 # Preset: nextjs
 
-Includes:
-- CI
-- Coverage
-- Scheduled maintenance
+Best for Next.js applications and sites.
+
+## Generated workflows
+
+- `ci.yml`
+- `coverage.yml`
+- `scheduled.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset nextjs --yes
+```
+
+## Notes
+
+- Release workflow is not included by default for app-style repos.
+- Add quality gates separately when needed via reusable `quality-gates.yml`.

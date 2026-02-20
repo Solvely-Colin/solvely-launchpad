@@ -1,5 +1,23 @@
+---
+title: Preset: python
+description: Setup guidance for Python repositories.
+---
+
 # Preset: python
 
-Includes:
-- CI baseline
-- Scheduled maintenance
+Best for Python packages and services.
+
+## Generated workflows
+
+- `ci.yml`
+- `scheduled.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset python --yes
+```
+
+## Notes
+
+- Start with baseline CI, then layer quality gates as needed.

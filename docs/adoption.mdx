@@ -1,31 +1,43 @@
+---
+title: Adoption
+description: Adoption KPIs, source of truth, and reporting cadence.
+---
+
 # Adoption Dashboard
 
-Primary KPI (90 days): external repos using `@v1` and `.citemplate.yml`.
+Primary KPI: `external_repos_on_v1`.
 
-## Metric definitions
+## KPI set
 
-- `external_repos_on_v1`: count of external repositories referencing Launchpad reusable workflows at `@v1`
-- `setup_pr_merge_rate`: merged setup PRs / total setup PRs opened in the reporting week
-- `time_to_first_green_ci`: median elapsed time from setup PR open to first successful CI run
-- `weekly_active_repos`: adopted repos with at least one Launchpad workflow run in the last 7 days
-- `issues_response_sla_met`: percentage of new issues receiving first maintainer response within 72 hours
+- `external_repos_on_v1`
+- `setup_pr_merge_rate`
+- `time_to_first_green_ci`
+- `weekly_active_repos`
+- `issues_response_sla_met`
 
-## Source of truth
+## Definitions
 
-- npm installs: npm package analytics for `solvely-launchpad`
-- workflow adoption: GitHub code search and/or tracked outreach list
-- setup conversions: outreach board or PR tracker
-- SLA: GitHub Issues timestamps
-- reliability overlap: `Self Test Matrix` workflow history
+- `external_repos_on_v1`: external repos referencing Launchpad reusable workflows at `@v1`
+- `setup_pr_merge_rate`: merged setup PRs / opened setup PRs per reporting week
+- `time_to_first_green_ci`: median elapsed time from setup PR open to first green CI
+- `weekly_active_repos`: adopted repos with at least one Launchpad run in last 7 days
+- `issues_response_sla_met`: issues with first maintainer response within 72 hours
 
-## Machine-readable tracking files
+## Sources of truth
+
+- GitHub code search for `uses: ...@v1`
+- outreach/setup PR tracker
+- GitHub Issues timestamps
+- self-test reliability overlap data
+
+## Machine-readable files
 
 - [`docs/metrics/adoption-weekly.json`](./metrics/adoption-weekly.json)
 - [`docs/metrics/reliability-weekly.json`](./metrics/reliability-weekly.json)
 
-Keep these files append-only by week to preserve historical trend visibility.
+Keep files append-only by week.
 
-## Weekly ritual (solo-friendly)
+## Weekly ritual
 
 Run:
 
@@ -33,20 +45,28 @@ Run:
 ./tooling/metrics/update-weekly.sh 2026-02-16
 ```
 
-1. Pull the latest 7 days of data for all five metrics.
-2. Update `docs/metrics/adoption-weekly.json` with one new weekly object.
-3. Update `docs/metrics/reliability-weekly.json` from self-test matrix results.
-4. Add a short weekly note in this file under `Weekly notes`.
-5. If `external_repos_on_v1` is flat and `setup-blocker` issues are rising, pause outreach and fix onboarding.
+Workflow:
+
+1. collect latest 7-day data for all KPIs
+2. append adoption weekly JSON record
+3. append reliability weekly JSON record
+4. add short interpretation note
+5. tune outreach volume based on blocker load
+
+## Solo operator guardrails
+
+- cap outreach when unresolved `setup-blocker` grows
+- prioritize onboarding fixes over net-new promotion if first-green time regresses
+- optimize for real `@v1` usage, not stars/traffic
 
 ## Owner checklist
 
-- [ ] Update weekly adoption metrics JSON
-- [ ] Update weekly reliability metrics JSON
-- [ ] Review open `setup-blocker` issues
-- [ ] Decide outreach volume for next week (cap 8-10 targets when support load is normal)
-- [ ] Post weekly learnings in roadmap/progress update
+- [ ] update adoption weekly JSON
+- [ ] update reliability weekly JSON
+- [ ] review open blocker issues
+- [ ] set next-week outreach cap
+- [ ] publish weekly learnings note
 
 ## Weekly notes
 
-- 2026-02-16 week: baseline week initialized; metrics collection process defined.
+- 2026-02-16 week: baseline week initialized; collection process defined.

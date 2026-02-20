@@ -1,6 +1,25 @@
+---
+title: Preset: turbo
+description: Setup guidance for Turborepo repositories.
+---
+
 # Preset: turbo
 
-Includes:
-- CI (turbo commands)
-- Scheduled maintenance
-- Commitlint
+Best for Turborepo-based projects.
+
+## Generated workflows
+
+- `ci.yml` (turbo-oriented commands)
+- `scheduled.yml`
+- `commitlint.yml`
+
+## Typical command
+
+```bash
+npx solvely-launchpad init --preset turbo --yes
+```
+
+## Notes
+
+- If workspace install/bootstrap differs, set `with.install-command` in caller `ci.yml`.
+- Keep workflow refs pinned to `@v1`.
