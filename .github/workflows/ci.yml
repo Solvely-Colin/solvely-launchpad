@@ -335,12 +335,12 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         if: ${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') != '' }}
         with:
           node-version: 22
           cache: ${{ needs.detect.outputs['package-manager'] }}
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         if: ${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') == '' }}
         with:
           node-version: 22
@@ -490,7 +490,7 @@ jobs:
     if: needs.detect.outputs['has-eslint'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -512,7 +512,7 @@ jobs:
     if: needs.detect.outputs['has-prettier'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -534,7 +534,7 @@ jobs:
     if: needs.detect.outputs['has-typescript'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -556,7 +556,7 @@ jobs:
     if: needs.detect.outputs['has-build'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -583,12 +583,12 @@ jobs:
         node-version: ${{ fromJson(needs.detect.outputs['node-versions']) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         if: ${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') != '' }}
         with:
           node-version: ${{ matrix.node-version }}
           cache: ${{ needs.detect.outputs['package-manager'] }}
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         if: ${{ hashFiles('package-lock.json', 'pnpm-lock.yaml', 'yarn.lock') == '' }}
         with:
           node-version: ${{ matrix.node-version }}
@@ -614,7 +614,7 @@ jobs:
     if: needs.detect.outputs['security-audit'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -634,7 +634,7 @@ jobs:
     if: needs.detect.outputs['license-check'] == 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
@@ -654,7 +654,7 @@ jobs:
     if: ${{ needs.detect.outputs['has-size-limit'] == 'true' && always() && needs.install.result == 'success' && needs.build.result == 'success' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 22
       - name: Enable corepack
